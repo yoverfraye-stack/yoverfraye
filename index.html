@@ -3,286 +3,325 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Asistencia QR - Rápido</title>
-    <!-- SweetAlert2 para formularios y alertas rápidas -->
+    <title>Control de Asistencia DNI y QR</title>
+    <!-- SweetAlert2 para formularios interactivos -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Html5-QRCode para escaneo directo con cámara móvil -->
+    <!-- Html5-QRCode para escaneo con la cámara del celular -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 900px; margin: 10px auto; padding: 15px; background-color: #f4f6f9; color: #333; }
-        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 1000px; margin: 10px auto; padding: 15px; background-color: #f4f6f9; color: #333; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .flex-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        
+        /* Botones principales */
         button { padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-blue { background: #007bff; color: white; }
+        .btn-blue:hover { background: #0056b3; }
         .btn-green { background: #28a745; color: white; }
+        .btn-green:hover { background: #218838; }
         .btn-purple { background: #6f42c1; color: white; }
-        .btn-entry { background: #e2f0d9; color: #385723; padding: 5px 10px; font-size: 12px; }
-        .btn-exit { background: #fce4d6; color: #c65911; padding: 5px 10px; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
+        .btn-purple:hover { background: #5a32a3; }
+        
+        /* Botones de asistencia de un solo clic */
+        .btn-click-entrada { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; padding: 6px 12px; font-size: 13px; border-radius: 4px; }
+        .btn-click-entrada:hover { background: #c3e6cb; }
+        .btn-click-salida { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 6px 12px; font-size: 13px; border-radius: 4px; }
+        .btn-click-salida:hover { background: #ffeeba; }
+        
+        /* Inputs y tablas */
+        input, select { padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+        .search-bar { width: 100%; max-width: 300px; font-weight: bold; border: 2px solid #007bff; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; font-size: 14px; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #e9ecef; }
-        .badge { padding: 3px 7px; border-radius: 12px; font-size: 11px; font-weight: bold; }
-        .badge-presente { background: #d4edda; color: #155724; }
+        th { background-color: #004085; color: white; }
+        tr:hover { background-color: #f8f9fa; }
+        
+        /* Estados */
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .badge-entrada { background: #d4edda; color: #155724; }
         .badge-salida { background: #cce5ff; color: #004085; }
         .badge-ausente { background: #f8d7da; color: #721c24; }
+        
+        #contenedor-camara { max-width: 320px; margin: 0 auto 15px auto; overflow: hidden; border-radius: 8px; border: 2px dashed #007bff; }
     </style>
 </head>
 <body>
 
-    <h2 style="color: #0056b3; margin-bottom: 5px;">EduControl - Registro Clínico y QR Móvil</h2>
-    <p style="color: #666; margin-top: 0;">Presiona un botón para ingresar datos de asistencia directamente o usa tu smartphone para escanear.</p>
+    <h2 style="color: #004085; margin-bottom: 5px;">Sistema de Control de Asistencia (DNI / QR Móvil)</h2>
+    <p style="color: #666; margin-top: 0; font-size: 14px;">Gestión de alumnos, buscador inteligente por DNI y marcado rápido con 1-clic.</p>
 
-    <!-- Panel de Acciones Superiores -->
+    <!-- Panel de Control Principal -->
     <div class="flex-container">
-        <button onclick="encenderCamara()" class="btn-blue">📷 Iniciar Lector QR Móvil</button>
-        <button onclick="crearEstudiante()" class="btn-green">+ Agregar Nuevo Alumno</button>
-        <button onclick="exportarBackup()" class="btn-purple">💾 Descargar Backup (.js)</button>
+        <button onclick="encenderCamara()" class="btn-blue">📷 Activar Lector QR Móvil</button>
+        <button onclick="crearEstudiante()" class="btn-green">+ Registrar Nuevo Alumno</button>
+        <button onclick="exportarBackup()" class="btn-purple">💾 Exportar Backup (.js)</button>
     </div>
 
-    <!-- Zona del Lector de Cámara del Teléfono -->
-    <div id="contenedor-camara" style="max-width: 360px; margin: 0 auto 15px auto; overflow: hidden; border-radius: 8px;"></div>
+    <!-- Contenedor del Escáner (Cámara del dispositivo móvil) -->
+    <div id="contenedor-camara"></div>
 
-    <!-- Filtro por Fecha de Calendario -->
-    <div class="card">
-        <label><b>Fecha de Control:</b> </label>
-        <input type="date" id="fechaFiltro" onchange="renderizarEstudiantes()" style="padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+    <!-- Filtros: Calendario de Seguimiento y Buscador por DNI -->
+    <div class="card flex-container" style="align-items: center; justify-content: space-between;">
+        <div>
+            <label><b>Fecha de Control:</b> </label>
+            <input type="date" id="fechaFiltro" onchange="renderizarTabla()">
+        </div>
+        <div>
+            <label><b>🔍 Buscar por DNI:</b> </label>
+            <input type="text" id="buscarDNI" class="search-bar" onkeyup="renderizarTabla()" placeholder="Escribe el DNI...">
+        </div>
     </div>
 
-    <!-- Listado Principal -->
-    <div class="card" style="overflow-x: auto;">
+    <!-- Tabla de Gestión de Datos y Asistencia -->
+    <div class="card" style="overflow-x: auto; padding: 0;">
         <table>
             <thead>
                 <tr>
-                    <th>Código QR</th>
+                    <th>DNI</th>
                     <th>Estudiante</th>
+                    <th>Género</th>
+                    <th>Edad</th>
+                    <th>Teléfono</th>
                     <th>Estado de Hoy</th>
-                    <th>Ingreso Rápido (1-Clic)</th>
-                    <th>Acciones</th>
+                    <th style="text-align: center;">Marcado Rápido (1-Clic)</th>
+                    <th style="text-align: center;">Acciones</th>
                 </tr>
             </thead>
-            <tbody id="tabla-cuerpo"></tbody>
+            <tbody id="tabla-estudiantes"></tbody>
         </table>
     </div>
 
     <script>
-        // Inicialización de la base de datos grabada con los 20 registros requeridos
+        // 1. Grabación nativa de los 20 registros con la estructura requerida
         let estudiantes = [
-            { id: "EST-001", nombre: "Yover Fraye", apellido: "Medrano Llampasi", correo: "yover@example.com" },
-            { id: "EST-002", nombre: "Ana", apellido: "García Mendoza", correo: "ana.garcia@example.com" },
-            { id: "EST-003", nombre: "Carlos", apellido: "Torres Quispe", correo: "carlos.torres@example.com" },
-            { id: "EST-004", nombre: "Diana", apellido: "Flores Portal", correo: "diana.flores@example.com" },
-            { id: "EST-005", nombre: "Eduardo", apellido: "Ramírez Roca", correo: "eduardo.ramirez@example.com" },
-            { id: "EST-006", nombre: "Fiorella", apellido: "Chávez Vega", correo: "fiorella.chavez@example.com" },
-            { id: "EST-007", nombre: "Gabriel", apellido: "Sánchez Cruz", correo: "gabriel.sanchez@example.com" },
-            { id: "EST-008", nombre: "Helena", apellido: "Palomino Rios", correo: "helena.palomino@example.com" },
-            { id: "EST-009", nombre: "Iván", apellido: "Castro Díaz", correo: "ivan.castro@example.com" },
-            { id: "EST-010", nombre: "Jessica", apellido: "Morales Luna", correo: "jessica.morales@example.com" },
-            { id: "EST-011", nombre: "Kevin", apellido: "Espinoza Solís", correo: "kevin.espinoza@example.com" },
-            { id: "EST-012", nombre: "Laura", apellido: "Benítez Vera", correo: "laura.benitez@example.com" },
-            { id: "EST-013", nombre: "Manuel", apellido: "Rojas Gutiérrez", correo: "manuel.rojas@example.com" },
-            { id: "EST-014", nombre: "Nancy", apellido: "Miranda Tello", correo: "nancy.miranda@example.com" },
-            { id: "EST-015", nombre: "Óscar", apellido: "Paredes Vilca", correo: "oscar.paredes@example.com" },
-            { id: "EST-016", nombre: "Patricia", apellido: "Arias Soto", correo: "patricia.arias@example.com" },
-            { id: "EST-017", nombre: "Ricardo", apellido: "Mendoza Fuentes", correo: "ricardo.mendoza@example.com" },
-            { id: "EST-018", nombre: "Sandra", apellido: "Campos Navarro", correo: "sandra.campos@example.com" },
-            { id: "EST-019", nombre: "Tomás", apellido: "Cordero Alva", correo: "tomas.cordero@example.com" },
-            { id: "EST-020", nombre: "Valeria", apellido: "Ortiz Cárdenas", correo: "valeria.ortiz@example.com" }
+            { dni: "60053804", nombre: "Yover Fraye", apellido: "Medrano Llampasi", genero: "Masculino", edad: 22, telefono: "933182823" },
+            { dni: "43653303", nombre: "Ana Lucía", apellido: "Quispe Torres", genero: "Femenino", edad: 20, telefono: "973659227" },
+            { dni: "43764491", nombre: "Christian", apellido: "García Mendoza", genero: "Masculino", edad: 20, telefono: "913220709" },
+            { dni: "56708761", nombre: "Milagros", apellido: "Flores Portal", genero: "Femenino", edad: 25, telefono: "969427670" },
+            { dni: "68252445", nombre: "Kevin Anthony", apellido: "Ramírez Roca", genero: "Masculino", edad: 19, telefono: "948286236" },
+            { dni: "45012569", nombre: "Valeria", apellido: "Chávez Vega", genero: "Femenino", edad: 21, telefono: "919018444" },
+            { dni: "71171801", nombre: "Diego Alonso", apellido: "Sánchez Cruz", genero: "Masculino", edad: 23, telefono: "966282868" },
+            { dni: "78589714", nombre: "Nancy", apellido: "Palomino Rios", genero: "Femenino", edad: 24, telefono: "938493132" },
+            { dni: "67451663", nombre: "Carlos Alberto", apellido: "Castro Díaz", genero: "Masculino", edad: 20, telefono: "932486795" },
+            { dni: "71960249", numeric: "0", nombre: "Jessica", apellido: "Morales Luna", genero: "Femenino", edad: 24, telefono: "918731518" },
+            { dni: "52514652", nombre: "Brayan", apellido: "Espinoza Solís", genero: "Masculino", edad: 23, telefono: "950853826" },
+            { dni: "60322256", nombre: "Laura Beatriz", apellido: "Benítez Vera", genero: "Femenino", edad: 25, telefono: "925345706" },
+            { dni: "43494799", nombre: "Luis Ángel", apellido: "Rojas Gutiérrez", genero: "Masculino", edad: 24, telefono: "929555135" },
+            { dni: "74360341", nombre: "Diana Carolina", apellido: "Miranda Tello", genero: "Femenino", edad: 18, telefono: "918703463" },
+            { dni: "77484666", nombre: "José Luis", apellido: "Paredes Vilca", genero: "Masculino", edad: 19, telefono: "968037622" },
+            { dni: "75459365", nombre: "Patricia", apellido: "Arias Soto", genero: "Femenino", edad: 18, telefono: "954848564" },
+            { dni: "42525324", nombre: "Alex", apellido: "Mendoza Fuentes", genero: "Masculino", edad: 20, telefono: "955393952" },
+            { dni: "53696611", nombre: "Sandra", apellido: "Campos Navarro", genero: "Femenino", edad: 19, telefono: "924373409" },
+            { dni: "51044455", nombre: "Juan Carlos", apellido: "Cordero Alva", genero: "Masculino", edad: 25, telefono: "913490740" },
+            { dni: "77478056", nombre: "Fiorella", apellido: "Ortiz Cárdenas", genero: "Femenino", edad: 24, telefono: "948197176" }
         ];
 
-        // Almacenamiento de asistencia estructurado por fechas
+        // Estructura interna de asistencias por fecha
         let asistencias = {};
 
-        // Definir la fecha actual por defecto
+        // Auto-establecer la fecha actual del sistema
         document.getElementById('fechaFiltro').value = new Date().toISOString().split('T')[0];
 
-        // Renderizar la tabla dinámica
-        function renderizarEstudiantes() {
-            const tbody = document.getElementById("tabla-cuerpo");
+        // 2. Renderizado de tabla con filtros de Fecha y Buscador por DNI
+        function renderizarTabla() {
+            const tbody = document.getElementById("tabla-estudiantes");
             tbody.innerHTML = "";
             
-            const fechaActual = document.getElementById('fechaFiltro').value;
-            const registroDia = asistencias[fechaActual] || {};
+            const fechaSeleccionada = document.getElementById('fechaFiltro').value;
+            const filtroDNI = document.getElementById('buscarDNI').value.trim();
+            const registrosDeHoy = asistencias[fechaSeleccionada] || {};
 
-            estudiantes.forEach(est => {
-                const estado = registroDia[est.id] || "Ausente";
+            // Filtrado dinámico por DNI
+            const estudiantesFiltrados = estudiantes.filter(est => est.dni.includes(filtroDNI));
+
+            estudiantesFiltrados.forEach(est => {
+                const estado = registrosDeHoy[est.dni] || "Ausente";
                 let badgeHTML = `<span class="badge badge-ausente">❌ Ausente</span>`;
                 
-                if (estado === "Presente") badgeHTML = `<span class="badge badge-presente">✅ Entrada</span>`;
-                if (estado === "Salida") badgeHTML = `<span class="badge badge-salida">🏁 Salió</span>`;
+                if (estado === "Entrada") badgeHTML = `<span class="badge badge-entrada">🛫 Entrada</span>`;
+                if (estado === "Salida") badgeHTML = `<span class="badge badge-salida">🛬 Salida</span>`;
 
                 tbody.innerHTML += `
                     <tr>
-                        <td style="font-family: monospace; font-weight: bold; color: #0056b3;">${est.id}</td>
+                        <td style="font-family: monospace; font-weight: bold; color: #004085;">${est.dni}</td>
                         <td><b>${est.apellido}</b>, ${est.nombre}</td>
+                        <td>${est.genero}</td>
+                        <td>${est.edad} años</td>
+                        <td>${est.telefono}</td>
                         <td>${badgeHTML}</td>
-                        <td>
-                            <button onclick="marcarUnClic('${est.id}', 'Presente')" class="btn-entry" title="Ingresar">Entrada</button>
-                            <button onclick="marcarUnClic('${est.id}', 'Salida')" class="btn-exit" title="Salida">Salida</button>
+                        <td style="text-align: center;">
+                            <button onclick="marcarUnClic('${est.dni}', 'Entrada')" class="btn-click-entrada">Entrada</button>
+                            <button onclick="marcarUnClic('${est.dni}', 'Salida')" class="btn-click-salida">Salida</button>
                         </td>
-                        <td>
-                            <button onclick="editarEstudiante('${est.id}')" style="background: none; border: none; cursor: pointer;">✏️</button>
-                            <button onclick="eliminarEstudiante('${est.id}')" style="background: none; border: none; cursor: pointer;">🗑️</button>
+                        <td style="text-align: center;">
+                            <button onclick="editarEstudiante('${est.dni}')" style="background:none; border:none; cursor:pointer; margin-right:5px;">✏️</button>
+                            <button onclick="eliminarEstudiante('${est.dni}')" style="background:none; border:none; cursor:pointer;">🗑️</button>
                         </td>
                     </tr>`;
             });
         }
 
-        // Marcar asistencia con un solo clic desde la tabla
-        function marcarUnClic(id, nuevoEstado) {
+        // 3. Función de Un Solo Clic para Ingresar o Marcar Salida Directamente
+        function marcarUnClic(dni, nuevoEstado) {
             const fecha = document.getElementById('fechaFiltro').value;
             if (!asistencias[fecha]) asistencias[fecha] = {};
             
-            asistencias[fecha][id] = nuevoEstado;
-            renderizarEstudiantes();
+            asistencias[fecha][dni] = nuevoEstado;
+            renderizarTabla();
 
-            const estudiante = estudiantes.find(e => e.id === id);
+            const alumno = estudiantes.find(e => e.dni === dni);
             Swal.fire({
-                title: 'Registro Actualizado',
-                text: `${estudiante.nombre} marcado como: ${nuevoEstado}`,
+                title: `Marcado: ${nuevoEstado}`,
+                text: `${alumno.nombre} ${alumno.apellido}`,
                 icon: 'success',
-                timer: 1000,
+                timer: 900,
                 showConfirmButton: false
             });
         }
 
-        // Lector QR Optimizado para Cámara de Teléfonos Móviles
+        // 4. Lector QR Integrado que fuerza la Cámara Trasera de Teléfonos Móviles
         function encenderCamara() {
             let html5QrCode = new Html5Qrcode("contenedor-camara");
             
-            // "environment" obliga al navegador móvil a activar la cámara trasera (principal)
+            // "environment" le indica al celular que use la cámara principal de atrás
             html5QrCode.start(
                 { facingMode: "environment" }, 
                 { fps: 15, qrbox: { width: 250, height: 250 } },
-                (textoCodigo) => {
+                (codigoEscaneado) => {
                     const fecha = document.getElementById('fechaFiltro').value;
-                    const codigoLimpio = textoCodigo.trim();
-                    const alumnoEncontrado = estudiantes.find(e => e.id === codigoLimpio);
+                    const dniLimpio = codigoEscaneado.trim();
+                    const alumno = estudiantes.find(e => e.dni === dniLimpio);
 
-                    if (alumnoEncontrado) {
+                    if (alumno) {
                         if (!asistencias[fecha]) asistencias[fecha] = {};
                         
-                        // Alternar de Entrada a Salida si vuelve a escanear el mismo día
-                        const estadoActual = asistencias[fecha][alumnoEncontrado.id];
-                        const proximoEstado = estadoActual === "Presente" ? "Salida" : "Presente";
+                        // Si ya tiene entrada, registrar salida de forma inteligente
+                        const estadoActual = asistencias[fecha][alumno.dni];
+                        const proximoEstado = estadoActual === "Entrada" ? "Salida" : "Entrada";
                         
-                        asistencias[fecha][alumnoEncontrado.id] = proximoEstado;
-                        renderizarEstudiantes();
+                        asistencias[fecha][alumno.dni] = proximoEstado;
+                        renderizarTabla();
                         
                         Swal.fire({
-                            title: `QR Escaneado Correctamente`,
-                            text: `${alumnoEncontrado.nombre} ${alumnoEncontrado.apellido} -> ${proximoEstado}`,
+                            title: `QR Escaneado`,
+                            text: `${alumno.nombre} ${alumno.apellido} -> ${proximoEstado}`,
                             icon: 'success',
                             timer: 2000,
                             showConfirmButton: false
                         });
                     } else {
-                        Swal.fire('Código Inválido', `El ID "${codigoLimpio}" no existe en el sistema.`, 'error');
+                        Swal.fire('No Registrado', `El DNI/Código QR "${dniLimpio}" no existe.`, 'error');
                     }
                 }
-            ).catch(err => Swal.fire('Aviso', 'Asegúrate de otorgar permisos de cámara y acceder vía HTTPS.', 'warning'));
+            ).catch(err => Swal.fire('Cámara', 'Permite el acceso a la cámara. Nota: Requiere conexión segura HTTPS o localhost.', 'warning'));
         }
 
-        // CRUD: Crear Alumno con SweetAlert2
+        // 5. CRUD Interactivos con SweetAlert2 (Crear, Editar, Eliminar)
         function crearEstudiante() {
             Swal.fire({
-                title: 'Agregar Estudiante',
+                title: 'Nuevo Estudiante',
                 html: `
-                    <input id="add-id" class="swal2-input" placeholder="Código Único / ID QR">
+                    <input id="add-dni" class="swal2-input" placeholder="DNI (8 dígitos)">
                     <input id="add-nom" class="swal2-input" placeholder="Nombres">
                     <input id="add-ape" class="swal2-input" placeholder="Apellidos">
-                    <input id="add-cor" type="email" class="swal2-input" placeholder="Correo Electrónico">
+                    <select id="add-gen" class="swal2-input"><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option></select>
+                    <input id="add-eda" type="number" class="swal2-input" placeholder="Edad">
+                    <input id="add-tel" class="swal2-input" placeholder="Teléfono">
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'Registrar',
                 preConfirm: () => {
-                    const id = document.getElementById('add-id').value.trim().toUpperCase();
+                    const dni = document.getElementById('add-dni').value.trim();
                     const nombre = document.getElementById('add-nom').value.trim();
                     const apellido = document.getElementById('add-ape').value.trim();
-                    const correo = document.getElementById('add-cor').value.trim();
+                    const genero = document.getElementById('add-gen').value;
+                    const edad = parseInt(document.getElementById('add-eda').value);
+                    const telefono = document.getElementById('add-tel').value.trim();
 
-                    if (!id || !nombre || !apellido || !correo) return Swal.showValidationMessage('Todos los campos son obligatorios');
-                    if (estudiantes.some(e => e.id === id)) return Swal.showValidationMessage('Ese código de ID ya existe');
-                    return { id, nombre, apellido, correo };
+                    if (!dni || !nombre || !apellido || !edad || !telefono) return Swal.showValidationMessage('Completar todos los datos');
+                    if (estudiantes.some(e => e.dni === dni)) return Swal.showValidationMessage('El número de DNI ya existe');
+                    return { dni, nombre, apellido, genero, edad, telefono };
                 }
             }).then(res => {
                 if (res.value) {
                     estudiantes.push(res.value);
-                    renderizarEstudiantes();
-                    Swal.fire('Agregado', 'Estudiante guardado en el sistema.', 'success');
+                    renderizarTabla();
+                    Swal.fire('Guardado', 'Alumno agregado.', 'success');
                 }
             });
         }
 
-        // CRUD: Editar Alumno con SweetAlert2
-        function editarEstudiante(id) {
-            const est = estudiantes.find(e => e.id === id);
+        function editarEstudiante(dni) {
+            const est = estudiantes.find(e => e.dni === dni);
             if (!est) return;
 
             Swal.fire({
-                title: `Modificar Datos (${id})`,
+                title: `Editar Alumno (${dni})`,
                 html: `
                     <input id="edit-nom" class="swal2-input" value="${est.nombre}" placeholder="Nombres">
                     <input id="edit-ape" class="swal2-input" value="${est.apellido}" placeholder="Apellidos">
-                    <input id="edit-cor" type="email" class="swal2-input" value="${est.correo}" placeholder="Correo">
+                    <select id="edit-gen" class="swal2-input">
+                        <option value="Masculino" ${est.genero === 'Masculino' ? 'selected' : ''}>Masculino</option>
+                        <option value="Femenino" ${est.genero === 'Femenino' ? 'selected' : ''}>Femenino</option>
+                    </select>
+                    <input id="edit-eda" type="number" class="swal2-input" value="${est.edad}" placeholder="Edad">
+                    <input id="edit-tel" class="swal2-input" value="${est.telefono}" placeholder="Teléfono">
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'Actualizar',
                 preConfirm: () => {
                     const nombre = document.getElementById('edit-nom').value.trim();
                     const apellido = document.getElementById('edit-ape').value.trim();
-                    const correo = document.getElementById('edit-cor').value.trim();
-                    if (!nombre || !apellido || !correo) return Swal.showValidationMessage('No dejes campos vacíos');
-                    return { nombre, apellido, correo };
+                    const genero = document.getElementById('edit-gen').value;
+                    const edad = parseInt(document.getElementById('edit-eda').value);
+                    const telefono = document.getElementById('edit-tel').value.trim();
+                    if (!nombre || !apellido || !edad || !telefono) return Swal.showValidationMessage('No dejes campos vacíos');
+                    return { nombre, apellido, genero, edad, telefono };
                 }
             }).then(res => {
                 if (res.value) {
-                    est.nombre = res.value.nombre;
-                    est.apellido = res.value.apellido;
-                    est.correo = res.value.correo;
-                    renderizarEstudiantes();
-                    Swal.fire('Actualizado', 'Datos guardados', 'success');
+                    Object.assign(est, res.value);
+                    renderizarTabla();
+                    Swal.fire('Actualizado', 'Cambios guardados con éxito.', 'success');
                 }
             });
         }
 
-        // CRUD: Eliminar Alumno con SweetAlert2
-        function eliminarEstudiante(id) {
+        function eliminarEstudiante(dni) {
             Swal.fire({
                 title: '¿Eliminar registro?',
-                text: `El alumno con código ${id} será removido.`,
+                text: `El alumno con DNI ${dni} será removido permanentemente.`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
-                confirmButtonText: 'Sí, eliminar'
+                confirmButtonText: 'Sí, borrar'
             }).then(res => {
                 if (res.isConfirmed) {
-                    estudiantes = estudiantes.filter(e => e.id !== id);
-                    renderizarEstudiantes();
+                    estudiantes = estudiantes.filter(e => e.dni !== dni);
+                    renderizarTabla();
                     Swal.fire('Eliminado', 'El estudiante ha sido borrado.', 'success');
                 }
             });
         }
 
-        // Exportar Backup en un Archivo JS funcional
+        // 6. Generar Backup de datos (.js) descargable
         function exportarBackup() {
-            const BackupObjeto = {
-                fechaExportacion: new Date().toISOString(),
+            const copiaSeguridad = {
+                fechaExport: new Date().toISOString(),
                 estudiantes: estudiantes,
                 asistencias: asistencias
             };
-
-            const dataScript = `// BACKUP COMPLETO SISTEMA DE ASISTENCIAS\nconst DATOS_RESPALDO = ${JSON.stringify(BackupObjeto, null, 4)};`;
+            const dataScript = `// RESPALDO DEL SISTEMA DE CONTROL\nconst BACKUP_DATA = ${JSON.stringify(copiaSeguridad, null, 4)};`;
             const blob = new Blob([dataScript], { type: "application/javascript;charset=utf-8" });
             const url = URL.createObjectURL(blob);
-            
-            const linkDescarga = document.createElement("a");
-            linkDescarga.href = url;
-            linkDescarga.download = `backup_asistencia_${document.getElementById('fechaFiltro').value}.js`;
-            linkDescarga.click();
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `backup_alumnos_${document.getElementById('fechaFiltro').value}.js`;
+            a.click();
         }
 
-        // Inicialización inicial en pantalla
-        renderizarEstudiantes();
+        // Inicio por defecto
+        renderizarTabla();
     </script>
 </body>
 </html>
