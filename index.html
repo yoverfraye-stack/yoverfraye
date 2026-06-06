@@ -1,43 +1,71 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Control QR - Ultra Simplificado</title>
+    <title>Control de Asistencia QR - Rápido</title>
+    <!-- SweetAlert2 para formularios y alertas rápidas -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Html5-QRCode para escaneo directo con cámara móvil -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 900px; margin: 10px auto; padding: 15px; background-color: #f4f6f9; color: #333; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .flex-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        button { padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-purple { background: #6f42c1; color: white; }
+        .btn-entry { background: #e2f0d9; color: #385723; padding: 5px 10px; font-size: 12px; }
+        .btn-exit { background: #fce4d6; color: #c65911; padding: 5px 10px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #e9ecef; }
+        .badge { padding: 3px 7px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .badge-presente { background: #d4edda; color: #155724; }
+        .badge-salida { background: #cce5ff; color: #004085; }
+        .badge-ausente { background: #f8d7da; color: #721c24; }
+    </style>
 </head>
-<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 10px auto; padding: 10px; background-color: #f9f9f9; color: #333;">
+<body>
 
-    <h2 style="text-align: center; color: #0056b3;">Sistema de Gestión de Estudiantes y Asistencia QR</h2>
-    <hr>
+    <h2 style="color: #0056b3; margin-bottom: 5px;">EduControl - Registro Clínico y QR Móvil</h2>
+    <p style="color: #666; margin-top: 0;">Presiona un botón para ingresar datos de asistencia directamente o usa tu smartphone para escanear.</p>
 
-    <div style="margin: 15px 0; display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="crearEstudiante()" style="background-color: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">+ Registrar Estudiante</button>
-        <button onclick="encenderCamara()" style="background-color: #17a2b8; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">📷 Abrir Cámara QR</button>
-        <button onclick="gestionarAsistenciaManual()" style="background-color: #6f42c1; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">📋 Gestionar Asistencia</button>
-        <button onclick="exportarBackup()" style="background-color: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">💾 Exportar Backup (.js)</button>
+    <!-- Panel de Acciones Superiores -->
+    <div class="flex-container">
+        <button onclick="encenderCamara()" class="btn-blue">📷 Iniciar Lector QR Móvil</button>
+        <button onclick="crearEstudiante()" class="btn-green">+ Agregar Nuevo Alumno</button>
+        <button onclick="exportarBackup()" class="btn-purple">💾 Descargar Backup (.js)</button>
     </div>
 
-    <div id="lector-qr" style="width: 100%; max-width: 320px; background-color: #eee; margin: 10px 0; border: 2px dashed #ccc; border-radius: 4px;"></div>
+    <!-- Zona del Lector de Cámara del Teléfono -->
+    <div id="contenedor-camara" style="max-width: 360px; margin: 0 auto 15px auto; overflow: hidden; border-radius: 8px;"></div>
 
-    <p><b>Fecha de Control:</b> <input type="date" id="fechaFiltro" onchange="renderizarTodo()" style="padding: 5px; font-size: 14px;"></p>
+    <!-- Filtro por Fecha de Calendario -->
+    <div class="card">
+        <label><b>Fecha de Control:</b> </label>
+        <input type="date" id="fechaFiltro" onchange="renderizarEstudiantes()" style="padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+    </div>
 
-    <table border="1" style="width: 100%; border-collapse: collapse; background-color: white; font-size: 14px;">
-        <thead>
-            <tr style="background-color: #f2f2f2; text-align: left;">
-                <th style="padding: 8px;">ID / Código QR</th>
-                <th style="padding: 8px;">Estudiante</th>
-                <th style="padding: 8px;">Correo</th>
-                <th style="padding: 8px; text-align: center;">Asistencia</th>
-                <th style="padding: 8px; text-align: center;">Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="tabla-estudiantes"></tbody>
-    </table>
+    <!-- Listado Principal -->
+    <div class="card" style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Código QR</th>
+                    <th>Estudiante</th>
+                    <th>Estado de Hoy</th>
+                    <th>Ingreso Rápido (1-Clic)</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-cuerpo"></tbody>
+        </table>
+    </div>
 
     <script>
-        // 1. Grabación inicial obligatoria de los 20 registros de estudiantes
+        // Inicialización de la base de datos grabada con los 20 registros requeridos
         let estudiantes = [
             { id: "EST-001", nombre: "Yover Fraye", apellido: "Medrano Llampasi", correo: "yover@example.com" },
             { id: "EST-002", nombre: "Ana", apellido: "García Mendoza", correo: "ana.garcia@example.com" },
@@ -61,215 +89,200 @@
             { id: "EST-020", nombre: "Valeria", apellido: "Ortiz Cárdenas", correo: "valeria.ortiz@example.com" }
         ];
 
-        // Diccionario estructurado para asistencias por fecha: { "YYYY-MM-DD": { "ID": "Presente"/"Ausente" } }
+        // Almacenamiento de asistencia estructurado por fechas
         let asistencias = {};
 
-        // Iniciar con la fecha del día actual en el calendario
+        // Definir la fecha actual por defecto
         document.getElementById('fechaFiltro').value = new Date().toISOString().split('T')[0];
 
-        // 2. Renderizar interfaz general
-        function renderizarTodo() {
-            const tbody = document.getElementById("tabla-estudiantes");
+        // Renderizar la tabla dinámica
+        function renderizarEstudiantes() {
+            const tbody = document.getElementById("tabla-cuerpo");
             tbody.innerHTML = "";
             
-            const fecha = document.getElementById('fechaFiltro').value;
-            const registroDelDia = asistencias[fecha] || {};
+            const fechaActual = document.getElementById('fechaFiltro').value;
+            const registroDia = asistencias[fechaActual] || {};
 
             estudiantes.forEach(est => {
-                const estado = registroDelDia[est.id] || "Ausente";
-                const colorEstado = estado === "Presente" ? "green" : "red";
+                const estado = registroDia[est.id] || "Ausente";
+                let badgeHTML = `<span class="badge badge-ausente">❌ Ausente</span>`;
+                
+                if (estado === "Presente") badgeHTML = `<span class="badge badge-presente">✅ Entrada</span>`;
+                if (estado === "Salida") badgeHTML = `<span class="badge badge-salida">🏁 Salió</span>`;
 
                 tbody.innerHTML += `
                     <tr>
-                        <td style="padding: 8px; font-weight: bold; color: #0056b3;">${est.id}</td>
-                        <td style="padding: 8px;">${est.apellido}, ${est.nombre}</td>
-                        <td style="padding: 8px; color: #666;">${est.correo}</td>
-                        <td style="padding: 8px; text-align: center; font-weight: bold; color: ${colorEstado};">${estado}</td>
-                        <td style="padding: 8px; text-align: center;">
-                            <button onclick="editarEstudiante('${est.id}')" style="cursor: pointer; margin-right: 5px;">✏️</button>
-                            <button onclick="eliminarEstudiante('${est.id}')" style="cursor: pointer;">🗑️</button>
+                        <td style="font-family: monospace; font-weight: bold; color: #0056b3;">${est.id}</td>
+                        <td><b>${est.apellido}</b>, ${est.nombre}</td>
+                        <td>${badgeHTML}</td>
+                        <td>
+                            <button onclick="marcarUnClic('${est.id}', 'Presente')" class="btn-entry" title="Ingresar">Entrada</button>
+                            <button onclick="marcarUnClic('${est.id}', 'Salida')" class="btn-exit" title="Salida">Salida</button>
+                        </td>
+                        <td>
+                            <button onclick="editarEstudiante('${est.id}')" style="background: none; border: none; cursor: pointer;">✏️</button>
+                            <button onclick="eliminarEstudiante('${est.id}')" style="background: none; border: none; cursor: pointer;">🗑️</button>
                         </td>
                     </tr>`;
             });
         }
 
-        // 3. Formulario SweetAlert2: Registrar Estudiante (CREATE)
+        // Marcar asistencia con un solo clic desde la tabla
+        function marcarUnClic(id, nuevoEstado) {
+            const fecha = document.getElementById('fechaFiltro').value;
+            if (!asistencias[fecha]) asistencias[fecha] = {};
+            
+            asistencias[fecha][id] = nuevoEstado;
+            renderizarEstudiantes();
+
+            const estudiante = estudiantes.find(e => e.id === id);
+            Swal.fire({
+                title: 'Registro Actualizado',
+                text: `${estudiante.nombre} marcado como: ${nuevoEstado}`,
+                icon: 'success',
+                timer: 1000,
+                showConfirmButton: false
+            });
+        }
+
+        // Lector QR Optimizado para Cámara de Teléfonos Móviles
+        function encenderCamara() {
+            let html5QrCode = new Html5Qrcode("contenedor-camara");
+            
+            // "environment" obliga al navegador móvil a activar la cámara trasera (principal)
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 15, qrbox: { width: 250, height: 250 } },
+                (textoCodigo) => {
+                    const fecha = document.getElementById('fechaFiltro').value;
+                    const codigoLimpio = textoCodigo.trim();
+                    const alumnoEncontrado = estudiantes.find(e => e.id === codigoLimpio);
+
+                    if (alumnoEncontrado) {
+                        if (!asistencias[fecha]) asistencias[fecha] = {};
+                        
+                        // Alternar de Entrada a Salida si vuelve a escanear el mismo día
+                        const estadoActual = asistencias[fecha][alumnoEncontrado.id];
+                        const proximoEstado = estadoActual === "Presente" ? "Salida" : "Presente";
+                        
+                        asistencias[fecha][alumnoEncontrado.id] = proximoEstado;
+                        renderizarEstudiantes();
+                        
+                        Swal.fire({
+                            title: `QR Escaneado Correctamente`,
+                            text: `${alumnoEncontrado.nombre} ${alumnoEncontrado.apellido} -> ${proximoEstado}`,
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire('Código Inválido', `El ID "${codigoLimpio}" no existe en el sistema.`, 'error');
+                    }
+                }
+            ).catch(err => Swal.fire('Aviso', 'Asegúrate de otorgar permisos de cámara y acceder vía HTTPS.', 'warning'));
+        }
+
+        // CRUD: Crear Alumno con SweetAlert2
         function crearEstudiante() {
             Swal.fire({
-                title: 'Registrar Nuevo Estudiante',
+                title: 'Agregar Estudiante',
                 html: `
-                    <input id="swal-id" class="swal2-input" placeholder="ID QR único (ej: EST-021)">
-                    <input id="swal-nom" class="swal2-input" placeholder="Nombres">
-                    <input id="swal-ape" class="swal2-input" placeholder="Apellidos">
-                    <input id="swal-cor" type="email" class="swal2-input" placeholder="Correo electrónico">
+                    <input id="add-id" class="swal2-input" placeholder="Código Único / ID QR">
+                    <input id="add-nom" class="swal2-input" placeholder="Nombres">
+                    <input id="add-ape" class="swal2-input" placeholder="Apellidos">
+                    <input id="add-cor" type="email" class="swal2-input" placeholder="Correo Electrónico">
                 `,
                 showCancelButton: true,
-                confirmButtonText: 'Guardar',
-                cancelButtonText: 'Cancelar',
+                confirmButtonText: 'Registrar',
                 preConfirm: () => {
-                    const id = document.getElementById('swal-id').value.trim().toUpperCase();
-                    const nombre = document.getElementById('swal-nom').value.trim();
-                    const apellido = document.getElementById('swal-ape').value.trim();
-                    const correo = document.getElementById('swal-cor').value.trim();
+                    const id = document.getElementById('add-id').value.trim().toUpperCase();
+                    const nombre = document.getElementById('add-nom').value.trim();
+                    const apellido = document.getElementById('add-ape').value.trim();
+                    const correo = document.getElementById('add-cor').value.trim();
 
                     if (!id || !nombre || !apellido || !correo) return Swal.showValidationMessage('Todos los campos son obligatorios');
-                    if (estudiantes.some(e => e.id === id)) return Swal.showValidationMessage('El ID ya está registrado');
-                    
+                    if (estudiantes.some(e => e.id === id)) return Swal.showValidationMessage('Ese código de ID ya existe');
                     return { id, nombre, apellido, correo };
                 }
-            }).then(result => {
-                if (result.value) {
-                    estudiantes.push(result.value);
-                    renderizarTodo();
-                    Swal.fire('¡Éxito!', 'Estudiante guardado.', 'success');
+            }).then(res => {
+                if (res.value) {
+                    estudiantes.push(res.value);
+                    renderizarEstudiantes();
+                    Swal.fire('Agregado', 'Estudiante guardado en el sistema.', 'success');
                 }
             });
         }
 
-        // 4. Formulario SweetAlert2: Editar Estudiante (UPDATE)
+        // CRUD: Editar Alumno con SweetAlert2
         function editarEstudiante(id) {
             const est = estudiantes.find(e => e.id === id);
             if (!est) return;
 
             Swal.fire({
-                title: `Editar: ${id}`,
+                title: `Modificar Datos (${id})`,
                 html: `
-                    <input id="swal-nom" class="swal2-input" value="${est.nombre}" placeholder="Nombres">
-                    <input id="swal-ape" class="swal2-input" value="${est.apellido}" placeholder="Apellidos">
-                    <input id="swal-cor" type="email" class="swal2-input" value="${est.correo}" placeholder="Correo">
+                    <input id="edit-nom" class="swal2-input" value="${est.nombre}" placeholder="Nombres">
+                    <input id="edit-ape" class="swal2-input" value="${est.apellido}" placeholder="Apellidos">
+                    <input id="edit-cor" type="email" class="swal2-input" value="${est.correo}" placeholder="Correo">
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'Actualizar',
-                cancelButtonText: 'Cancelar',
                 preConfirm: () => {
-                    const nombre = document.getElementById('swal-nom').value.trim();
-                    const apellido = document.getElementById('swal-ape').value.trim();
-                    const correo = document.getElementById('swal-cor').value.trim();
-
-                    if (!nombre || !apellido || !correo) return Swal.showValidationMessage('Campos obligatorios vacíos');
+                    const nombre = document.getElementById('edit-nom').value.trim();
+                    const apellido = document.getElementById('edit-ape').value.trim();
+                    const correo = document.getElementById('edit-cor').value.trim();
+                    if (!nombre || !apellido || !correo) return Swal.showValidationMessage('No dejes campos vacíos');
                     return { nombre, apellido, correo };
                 }
-            }).then(result => {
-                if (result.value) {
-                    est.nombre = result.value.nombre;
-                    est.apellido = result.value.apellido;
-                    est.correo = result.value.correo;
-                    renderizarTodo();
-                    Swal.fire('Actualizado', 'Información modificada.', 'success');
+            }).then(res => {
+                if (res.value) {
+                    est.nombre = res.value.nombre;
+                    est.apellido = res.value.apellido;
+                    est.correo = res.value.correo;
+                    renderizarEstudiantes();
+                    Swal.fire('Actualizado', 'Datos guardados', 'success');
                 }
             });
         }
 
-        // 5. Formulario SweetAlert2: Eliminar Estudiante (DELETE)
+        // CRUD: Eliminar Alumno con SweetAlert2
         function eliminarEstudiante(id) {
             Swal.fire({
                 title: '¿Eliminar registro?',
-                text: `Se borrará el estudiante con código ${id}`,
+                text: `El alumno con código ${id} será removido.`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Sí, borrar',
-                cancelButtonText: 'Cancelar'
-            }).then(result => {
-                if (result.isConfirmed) {
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Sí, eliminar'
+            }).then(res => {
+                if (res.isConfirmed) {
                     estudiantes = estudiantes.filter(e => e.id !== id);
-                    renderizarTodo();
-                    Swal.fire('Eliminado', 'El estudiante ha sido removido.', 'success');
+                    renderizarEstudiantes();
+                    Swal.fire('Eliminado', 'El estudiante ha sido borrado.', 'success');
                 }
             });
         }
 
-        // 6. Cámara integrada para Lector QR
-        function encenderCamara() {
-            let html5QrCode = new Html5Qrcode("lector-qr");
-            
-            // "environment" abre directamente la cámara de atrás en tu smartphone
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: 220 },
-                (codigoQR) => {
-                    const fecha = document.getElementById('fechaFiltro').value;
-                    const alumno = estudiantes.find(e => e.id === codigoQR.trim());
-
-                    if (alumno) {
-                        if (!asistencias[fecha]) asistencias[fecha] = {};
-                        asistencias[fecha][alumno.id] = "Presente";
-                        renderizarTodo();
-                        
-                        Swal.fire({
-                            title: 'Asistencia Marcada',
-                            text: `${alumno.apellido}, ${alumno.nombre} está Presente`,
-                            icon: 'success',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-                    } else {
-                        Swal.fire('Error', `Código QR "${codigoQR}" no reconocido`, 'error');
-                    }
-                }
-            ).catch(err => Swal.fire('Error de Cámara', 'Verifica permisos o conexión HTTPS/localhost.', 'error'));
-        }
-
-        // 7. Formulario SweetAlert2: Gestión e historial manual de asistencias
-        async function gestionarAsistenciaManual() {
-            const fecha = document.getElementById('fechaFiltro').value;
-            if (!asistencias[fecha]) asistencias[fecha] = {};
-
-            let htmlContenido = `<div style="max-height: 250px; overflow-y: auto; text-align: left;">`;
-            estudiantes.forEach(est => {
-                const estadoActual = asistencias[fecha][est.id] || "Ausente";
-                htmlContenido += `
-                    <div style="margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 13px;">${est.apellido}, ${est.nombre}</span>
-                        <select id="pop-${est.id}" style="padding: 2px;">
-                            <option value="Ausente" ${estadoActual === 'Ausente' ? 'selected' : ''}>Ausente</option>
-                            <option value="Presente" ${estadoActual === 'Presente' ? 'selected' : ''}>Presente</option>
-                        </select>
-                    </div>`;
-            });
-            htmlContenido += `</div>`;
-
-            Swal.fire({
-                title: `Asistencias del ${fecha}`,
-                html: htmlContenido,
-                showCancelButton: true,
-                confirmButtonText: 'Guardar Cambios',
-                cancelButtonText: 'Cerrar',
-                preConfirm: () => {
-                    estudiantes.forEach(est => {
-                        asistencias[fecha][est.id] = document.getElementById(`pop-${est.id}`).value;
-                    });
-                    return true;
-                }
-            }).then(result => {
-                if (result.value) {
-                    renderizarTodo();
-                    Swal.fire('Éxito', 'Lista de asistencia actualizada.', 'success');
-                }
-            });
-        }
-
-        // 8. Generar archivo ejecutable/importable JS con los datos guardados (Backup)
+        // Exportar Backup en un Archivo JS funcional
         function exportarBackup() {
-            const estructuraBackup = {
-                fechaCopia: new Date().toISOString(),
+            const BackupObjeto = {
+                fechaExportacion: new Date().toISOString(),
                 estudiantes: estudiantes,
                 asistencias: asistencias
             };
 
-            const dataJS = `// RESPALDO DEL SISTEMA DE CONTROL DE ASISTENCIAS\nconst BACKUP_SISTEMA = ${JSON.stringify(estructuraBackup, null, 4)};`;
-            
-            const blob = new Blob([dataJS], { type: "application/javascript;charset=utf-8" });
+            const dataScript = `// BACKUP COMPLETO SISTEMA DE ASISTENCIAS\nconst DATOS_RESPALDO = ${JSON.stringify(BackupObjeto, null, 4)};`;
+            const blob = new Blob([dataScript], { type: "application/javascript;charset=utf-8" });
             const url = URL.createObjectURL(blob);
             
-            const dynamicLink = document.createElement("a");
-            dynamicLink.href = url;
-            dynamicLink.download = `backup_sistema_${document.getElementById('fechaFiltro').value}.js`;
-            dynamicLink.click();
+            const linkDescarga = document.createElement("a");
+            linkDescarga.href = url;
+            linkDescarga.download = `backup_asistencia_${document.getElementById('fechaFiltro').value}.js`;
+            linkDescarga.click();
         }
 
-        // Inicialización automática
-        renderizarTodo();
+        // Inicialización inicial en pantalla
+        renderizarEstudiantes();
     </script>
 </body>
 </html>
