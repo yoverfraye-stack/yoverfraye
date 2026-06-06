@@ -1,138 +1,275 @@
-¡Entendido! Aquí tienes la versión ultra simplificada.
-
-Todo el sistema está reducido a lo más mínimo y esencial: un diseño básico sin frameworks visuales, el uso de SweetAlert2 tradicional para agregar estudiantes, y la cámara que lee el código QR directo desde un cuadro en la pantalla.
-
-Guarda este código como index.html y pruébalo:
-
-HTML
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>QR Ultra Simplificado</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Control QR - Ultra Simplificado</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
-<body style="font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 10px;">
+<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 10px auto; padding: 10px; background-color: #f9f9f9; color: #333;">
 
-    <h2>Estudiantes y Asistencia QR</h2>
-    
-    <button onclick="agregar()">+ Nuevo Alumno</button>
-    <button onclick="encenderCamara()" style="background: #007bff; color: white;">Activar Cámara QR</button>
-    <button onclick="exportarBackup()" style="background: #28a745; color: white;">Guardar Backup (.js)</button>
+    <h2 style="text-align: center; color: #0056b3;">Sistema de Gestión de Estudiantes y Asistencia QR</h2>
+    <hr>
 
-    <div id="camara" style="width: 100%; max-width: 300px; background: #eee; margin: 15px 0;"></div>
+    <div style="margin: 15px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="crearEstudiante()" style="background-color: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">+ Registrar Estudiante</button>
+        <button onclick="encenderCamara()" style="background-color: #17a2b8; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">📷 Abrir Cámara QR</button>
+        <button onclick="gestionarAsistenciaManual()" style="background-color: #6f42c1; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">📋 Gestionar Asistencia</button>
+        <button onclick="exportarBackup()" style="background-color: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;">💾 Exportar Backup (.js)</button>
+    </div>
 
-    <p>Fecha de Control: <input type="date" id="fecha" onchange="actualizarPantalla()"></p>
+    <div id="lector-qr" style="width: 100%; max-width: 320px; background-color: #eee; margin: 10px 0; border: 2px dashed #ccc; border-radius: 4px;"></div>
 
-    <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+    <p><b>Fecha de Control:</b> <input type="date" id="fechaFiltro" onchange="renderizarTodo()" style="padding: 5px; font-size: 14px;"></p>
+
+    <table border="1" style="width: 100%; border-collapse: collapse; background-color: white; font-size: 14px;">
         <thead>
-            <tr style="background: #f2f2f2;">
-                <th>ID / QR</th>
-                <th>Nombre</th>
-                <th>Asistencia</th>
-                <th>Acción</th>
+            <tr style="background-color: #f2f2f2; text-align: left;">
+                <th style="padding: 8px;">ID / Código QR</th>
+                <th style="padding: 8px;">Estudiante</th>
+                <th style="padding: 8px;">Correo</th>
+                <th style="padding: 8px; text-align: center;">Asistencia</th>
+                <th style="padding: 8px; text-align: center;">Acciones</th>
             </tr>
         </thead>
-        <tbody id="tabla-cuerpo"></tbody>
+        <tbody id="tabla-estudiantes"></tbody>
     </table>
 
     <script>
-        // 1. Base de datos interna (Array con 20 registros iniciales)
-        let alumnos = Array.from({length: 20}, (_, i) => ({
-            id: `EST-${String(i+1).padStart(3, '0')}`,
-            nombre: `Estudiante Ejemplo ${i+1}`
-        }));
+        // 1. Grabación inicial obligatoria de los 20 registros de estudiantes
+        let estudiantes = [
+            { id: "EST-001", nombre: "Yover Fraye", apellido: "Medrano Llampasi", correo: "yover@example.com" },
+            { id: "EST-002", nombre: "Ana", apellido: "García Mendoza", correo: "ana.garcia@example.com" },
+            { id: "EST-003", nombre: "Carlos", apellido: "Torres Quispe", correo: "carlos.torres@example.com" },
+            { id: "EST-004", nombre: "Diana", apellido: "Flores Portal", correo: "diana.flores@example.com" },
+            { id: "EST-005", nombre: "Eduardo", apellido: "Ramírez Roca", correo: "eduardo.ramirez@example.com" },
+            { id: "EST-006", nombre: "Fiorella", apellido: "Chávez Vega", correo: "fiorella.chavez@example.com" },
+            { id: "EST-007", nombre: "Gabriel", apellido: "Sánchez Cruz", correo: "gabriel.sanchez@example.com" },
+            { id: "EST-008", nombre: "Helena", apellido: "Palomino Rios", correo: "helena.palomino@example.com" },
+            { id: "EST-009", nombre: "Iván", apellido: "Castro Díaz", correo: "ivan.castro@example.com" },
+            { id: "EST-010", nombre: "Jessica", apellido: "Morales Luna", correo: "jessica.morales@example.com" },
+            { id: "EST-011", nombre: "Kevin", apellido: "Espinoza Solís", correo: "kevin.espinoza@example.com" },
+            { id: "EST-012", nombre: "Laura", apellido: "Benítez Vera", correo: "laura.benitez@example.com" },
+            { id: "EST-013", nombre: "Manuel", apellido: "Rojas Gutiérrez", correo: "manuel.rojas@example.com" },
+            { id: "EST-014", nombre: "Nancy", apellido: "Miranda Tello", correo: "nancy.miranda@example.com" },
+            { id: "EST-015", nombre: "Óscar", apellido: "Paredes Vilca", correo: "oscar.paredes@example.com" },
+            { id: "EST-016", nombre: "Patricia", apellido: "Arias Soto", correo: "patricia.arias@example.com" },
+            { id: "EST-017", nombre: "Ricardo", apellido: "Mendoza Fuentes", correo: "ricardo.mendoza@example.com" },
+            { id: "EST-018", nombre: "Sandra", apellido: "Campos Navarro", correo: "sandra.campos@example.com" },
+            { id: "EST-019", nombre: "Tomás", apellido: "Cordero Alva", correo: "tomas.cordero@example.com" },
+            { id: "EST-020", nombre: "Valeria", apellido: "Ortiz Cárdenas", correo: "valeria.ortiz@example.com" }
+        ];
 
-        // Registro de asistencias: { "YYYY-MM-DD": { "ID": "Presente" } }
-        let asistencias = {}; 
+        // Diccionario estructurado para asistencias por fecha: { "YYYY-MM-DD": { "ID": "Presente"/"Ausente" } }
+        let asistencias = {};
 
-        // Colocar la fecha de hoy automáticamente al abrir
-        document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+        // Iniciar con la fecha del día actual en el calendario
+        document.getElementById('fechaFiltro').value = new Date().toISOString().split('T')[0];
 
-        // 2. Dibujar la interfaz
-        function actualizarPantalla() {
-            const cuerpo = document.getElementById("tabla-cuerpo");
-            cuerpo.innerHTML = "";
+        // 2. Renderizar interfaz general
+        function renderizarTodo() {
+            const tbody = document.getElementById("tabla-estudiantes");
+            tbody.innerHTML = "";
             
-            const fechaSeleccionada = document.getElementById('fecha').value;
-            const registroHoy = asistencias[fechaSeleccionada] || {};
+            const fecha = document.getElementById('fechaFiltro').value;
+            const registroDelDia = asistencias[fecha] || {};
 
-            alumnos.forEach(alumno => {
-                const asis = registroHoy[alumno.id] ? "✅ Presente" : "❌ Ausente";
-                cuerpo.innerHTML += `
+            estudiantes.forEach(est => {
+                const estado = registroDelDia[est.id] || "Ausente";
+                const colorEstado = estado === "Presente" ? "green" : "red";
+
+                tbody.innerHTML += `
                     <tr>
-                        <td style="padding:8px;"><b>${alumno.id}</b></td>
-                        <td style="padding:8px;">${alumno.nombre}</td>
-                        <td style="padding:8px;">${asis}</td>
-                        <td style="padding:8px;">
-                            <button onclick="eliminar('${alumno.id}')">🗑️</button>
+                        <td style="padding: 8px; font-weight: bold; color: #0056b3;">${est.id}</td>
+                        <td style="padding: 8px;">${est.apellido}, ${est.nombre}</td>
+                        <td style="padding: 8px; color: #666;">${est.correo}</td>
+                        <td style="padding: 8px; text-align: center; font-weight: bold; color: ${colorEstado};">${estado}</td>
+                        <td style="padding: 8px; text-align: center;">
+                            <button onclick="editarEstudiante('${est.id}')" style="cursor: pointer; margin-right: 5px;">✏️</button>
+                            <button onclick="eliminarEstudiante('${est.id}')" style="cursor: pointer;">🗑️</button>
                         </td>
                     </tr>`;
             });
         }
 
-        // 3. Registrar nuevo estudiante con SweetAlert2
-        function agregar() {
+        // 3. Formulario SweetAlert2: Registrar Estudiante (CREATE)
+        function crearEstudiante() {
             Swal.fire({
-                title: 'Nuevo Estudiante',
-                html: '<input id="ins-id" placeholder="ID (ej: EST-021)" style="margin-bottom:10px;"><br><input id="ins-nom" placeholder="Nombre Completo">',
+                title: 'Registrar Nuevo Estudiante',
+                html: `
+                    <input id="swal-id" class="swal2-input" placeholder="ID QR único (ej: EST-021)">
+                    <input id="swal-nom" class="swal2-input" placeholder="Nombres">
+                    <input id="swal-ape" class="swal2-input" placeholder="Apellidos">
+                    <input id="swal-cor" type="email" class="swal2-input" placeholder="Correo electrónico">
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Guardar',
+                cancelButtonText: 'Cancelar',
                 preConfirm: () => {
-                    const id = document.getElementById('ins-id').value.trim().toUpperCase();
-                    const nombre = document.getElementById('ins-nom').value.trim();
-                    if(!id || !nombre) return Swal.showValidationMessage('Completa ambos campos');
-                    if(alumnos.some(a => a.id === id)) return Swal.showValidationMessage('El ID ya existe');
-                    return { id, nombre };
+                    const id = document.getElementById('swal-id').value.trim().toUpperCase();
+                    const nombre = document.getElementById('swal-nom').value.trim();
+                    const apellido = document.getElementById('swal-ape').value.trim();
+                    const correo = document.getElementById('swal-cor').value.trim();
+
+                    if (!id || !nombre || !apellido || !correo) return Swal.showValidationMessage('Todos los campos son obligatorios');
+                    if (estudiantes.some(e => e.id === id)) return Swal.showValidationMessage('El ID ya está registrado');
+                    
+                    return { id, nombre, apellido, correo };
                 }
-            }).then(r => {
-                if(r.value) {
-                    alumnos.push(r.value);
-                    actualizarPantalla();
-                    Swal.fire('Guardado', '', 'success');
+            }).then(result => {
+                if (result.value) {
+                    estudiantes.push(result.value);
+                    renderizarTodo();
+                    Swal.fire('¡Éxito!', 'Estudiante guardado.', 'success');
                 }
             });
         }
 
-        // 4. Eliminar Estudiante
-        function eliminar(id) {
-            alumnos = alumnos.filter(a => a.id !== id);
-            actualizarPantalla();
+        // 4. Formulario SweetAlert2: Editar Estudiante (UPDATE)
+        function editarEstudiante(id) {
+            const est = estudiantes.find(e => e.id === id);
+            if (!est) return;
+
+            Swal.fire({
+                title: `Editar: ${id}`,
+                html: `
+                    <input id="swal-nom" class="swal2-input" value="${est.nombre}" placeholder="Nombres">
+                    <input id="swal-ape" class="swal2-input" value="${est.apellido}" placeholder="Apellidos">
+                    <input id="swal-cor" type="email" class="swal2-input" value="${est.correo}" placeholder="Correo">
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Actualizar',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const nombre = document.getElementById('swal-nom').value.trim();
+                    const apellido = document.getElementById('swal-ape').value.trim();
+                    const correo = document.getElementById('swal-cor').value.trim();
+
+                    if (!nombre || !apellido || !correo) return Swal.showValidationMessage('Campos obligatorios vacíos');
+                    return { nombre, apellido, correo };
+                }
+            }).then(result => {
+                if (result.value) {
+                    est.nombre = result.value.nombre;
+                    est.apellido = result.value.apellido;
+                    est.correo = result.value.correo;
+                    renderizarTodo();
+                    Swal.fire('Actualizado', 'Información modificada.', 'success');
+                }
+            });
         }
 
-        // 5. Escáner QR por Cámara (Usa la cámara trasera en celulares)
+        // 5. Formulario SweetAlert2: Eliminar Estudiante (DELETE)
+        function eliminarEstudiante(id) {
+            Swal.fire({
+                title: '¿Eliminar registro?',
+                text: `Se borrará el estudiante con código ${id}`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Sí, borrar',
+                cancelButtonText: 'Cancelar'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    estudiantes = estudiantes.filter(e => e.id !== id);
+                    renderizarTodo();
+                    Swal.fire('Eliminado', 'El estudiante ha sido removido.', 'success');
+                }
+            });
+        }
+
+        // 6. Cámara integrada para Lector QR
         function encenderCamara() {
-            let html5QrCode = new Html5Qrcode("camara");
+            let html5QrCode = new Html5Qrcode("lector-qr");
+            
+            // "environment" abre directamente la cámara de atrás en tu smartphone
             html5QrCode.start(
                 { facingMode: "environment" }, 
-                { fps: 10, qrbox: 180 },
-                (codigoEscaneado) => {
-                    const fecha = document.getElementById('fecha').value;
-                    const alumnoExiste = alumnos.find(a => a.id === codigoEscaneado.trim());
+                { fps: 10, qrbox: 220 },
+                (codigoQR) => {
+                    const fecha = document.getElementById('fechaFiltro').value;
+                    const alumno = estudiantes.find(e => e.id === codigoQR.trim());
 
-                    if (alumnoExiste) {
+                    if (alumno) {
                         if (!asistencias[fecha]) asistencias[fecha] = {};
-                        asistencias[fecha][codigoEscaneado.trim()] = true; // Marca como presente
-                        actualizarPantalla();
-                        Swal.fire({ title: 'Asistencia OK', text: alumnoExiste.nombre, icon: 'success', timer: 1500, showConfirmButton: false });
+                        asistencias[fecha][alumno.id] = "Presente";
+                        renderizarTodo();
+                        
+                        Swal.fire({
+                            title: 'Asistencia Marcada',
+                            text: `${alumno.apellido}, ${alumno.nombre} está Presente`,
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
                     } else {
-                        Swal.fire('No encontrado', `El código ${codigoEscaneado} no pertenece a la lista`, 'error');
+                        Swal.fire('Error', `Código QR "${codigoQR}" no reconocido`, 'error');
                     }
                 }
-            ).catch(err => alert("Error al iniciar cámara: " + err));
+            ).catch(err => Swal.fire('Error de Cámara', 'Verifica permisos o conexión HTTPS/localhost.', 'error'));
         }
 
-        // 6. Exportar Backup como código .js ejecutable
+        // 7. Formulario SweetAlert2: Gestión e historial manual de asistencias
+        async function gestionarAsistenciaManual() {
+            const fecha = document.getElementById('fechaFiltro').value;
+            if (!asistencias[fecha]) asistencias[fecha] = {};
+
+            let htmlContenido = `<div style="max-height: 250px; overflow-y: auto; text-align: left;">`;
+            estudiantes.forEach(est => {
+                const estadoActual = asistencias[fecha][est.id] || "Ausente";
+                htmlContenido += `
+                    <div style="margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 13px;">${est.apellido}, ${est.nombre}</span>
+                        <select id="pop-${est.id}" style="padding: 2px;">
+                            <option value="Ausente" ${estadoActual === 'Ausente' ? 'selected' : ''}>Ausente</option>
+                            <option value="Presente" ${estadoActual === 'Presente' ? 'selected' : ''}>Presente</option>
+                        </select>
+                    </div>`;
+            });
+            htmlContenido += `</div>`;
+
+            Swal.fire({
+                title: `Asistencias del ${fecha}`,
+                html: htmlContenido,
+                showCancelButton: true,
+                confirmButtonText: 'Guardar Cambios',
+                cancelButtonText: 'Cerrar',
+                preConfirm: () => {
+                    estudiantes.forEach(est => {
+                        asistencias[fecha][est.id] = document.getElementById(`pop-${est.id}`).value;
+                    });
+                    return true;
+                }
+            }).then(result => {
+                if (result.value) {
+                    renderizarTodo();
+                    Swal.fire('Éxito', 'Lista de asistencia actualizada.', 'success');
+                }
+            });
+        }
+
+        // 8. Generar archivo ejecutable/importable JS con los datos guardados (Backup)
         function exportarBackup() {
-            const dataStr = `// Backup del sistema\nconst DATOS_RESPALDO = ${JSON.stringify({alumnos, asistencias}, null, 2)};`;
-            const blob = new Blob([dataStr], {type: "text/javascript"});
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = `backup_${document.getElementById('fecha').value}.js`;
-            a.click();
+            const estructuraBackup = {
+                fechaCopia: new Date().toISOString(),
+                estudiantes: estudiantes,
+                asistencias: asistencias
+            };
+
+            const dataJS = `// RESPALDO DEL SISTEMA DE CONTROL DE ASISTENCIAS\nconst BACKUP_SISTEMA = ${JSON.stringify(estructuraBackup, null, 4)};`;
+            
+            const blob = new Blob([dataJS], { type: "application/javascript;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            
+            const dynamicLink = document.createElement("a");
+            dynamicLink.href = url;
+            dynamicLink.download = `backup_sistema_${document.getElementById('fechaFiltro').value}.js`;
+            dynamicLink.click();
         }
 
-        // Carga inicial de la tabla
-        actualizarPantalla();
+        // Inicialización automática
+        renderizarTodo();
     </script>
 </body>
 </html>
