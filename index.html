@@ -1,225 +1,138 @@
+¡Entendido! Aquí tienes la versión ultra simplificada.
+
+Todo el sistema está reducido a lo más mínimo y esencial: un diseño básico sin frameworks visuales, el uso de SweetAlert2 tradicional para agregar estudiantes, y la cámara que lee el código QR directo desde un cuadro en la pantalla.
+
+Guarda este código como index.html y pruébalo:
+
+HTML
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gestión de Estudiantes y Asistencia QR</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>QR Ultra Simplificado</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .calendar-day.present { background-color: #10B981; color: white; }
-        .calendar-day.absent { background-color: #EF4444; color: white; }
-    </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen">
+<body style="font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 10px;">
 
-    <nav class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-50">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold"><i class="fa-solid fa-graduation-cap mr-2"></i>EduControl QR</h1>
-            <div class="space-x-2">
-                <button onclick="exportarBackup()" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded text-sm font-semibold transition shadow">
-                    <i class="fa-solid fa-download mr-1"></i> Exportar Backup (.js)
-                </button>
-            </div>
-        </div>
-    </nav>
+    <h2>Estudiantes y Asistencia QR</h2>
+    
+    <button onclick="agregar()">+ Nuevo Alumno</button>
+    <button onclick="encenderCamara()" style="background: #007bff; color: white;">Activar Cámara QR</button>
+    <button onclick="exportarBackup()" style="background: #28a745; color: white;">Guardar Backup (.js)</button>
 
-    <div class="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <div class="space-y-6 lg:col-span-1">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                    <i class="fa-solid fa-qrcode text-blue-600 mr-2"></i> Escáner de Asistencia QR
-                </h2>
-                <div id="reader" class="w-full bg-gray-50 rounded border" style="overflow: hidden;"></div>
-                <div class="mt-4 flex gap-2">
-                    <button onclick="iniciarEscaneo()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium transition">
-                        <i class="fa-solid fa-camera mr-1"></i> Abrir Cámara
-                    </button>
-                    <button onclick="detenerEscaneo()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded font-medium transition">
-                        Detener
-                    </button>
-                </div>
-            </div>
+    <div id="camara" style="width: 100%; max-width: 300px; background: #eee; margin: 15px 0;"></div>
 
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-lg font-semibold text-gray-700 mb-2 flex items-center justify-between">
-                    <span><i class="fa-solid fa-calendar-days text-blue-600 mr-2"></i>Calendario de Control</span>
-                    <button onclick="gestionarAsistenciaManual()" class="text-sm bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200">
-                        <i class="fa-solid fa-sliders"></i> Gestionar
-                    </button>
-                </h2>
-                <div class="mb-4">
-                    <input type="date" id="fechaFiltro" onchange="renderizarCalendario()" class="w-full p-2 border rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div id="resumenAsistencia" class="text-sm text-gray-600 bg-gray-50 p-3 rounded space-y-1">
-                    </div>
-            </div>
-        </div>
+    <p>Fecha de Control: <input type="date" id="fecha" onchange="actualizarPantalla()"></p>
 
-        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-users text-blue-600 mr-2"></i>Panel de Estudiantes</h2>
-                <button onclick="crearEstudiante()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition shadow w-full sm:w-auto">
-                    <i class="fa-solid fa-user-plus mr-1"></i> Nuevo Estudiante
-                </button>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
-                    <thead class="bg-gray-50 text-gray-700 uppercase font-semibold">
-                        <tr>
-                            <th class="px-4 py-3">Código / ID QR</th>
-                            <th class="px-4 py-3">Estudiante</th>
-                            <th class="px-4 py-3">Correo</th>
-                            <th class="px-4 py-3 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaEstudiantes" class="divide-y divide-gray-200 text-gray-600">
-                        </tbody>
-                </table>
-            </div>
-        </div>
-
-    </div>
+    <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+        <thead>
+            <tr style="background: #f2f2f2;">
+                <th>ID / QR</th>
+                <th>Nombre</th>
+                <th>Asistencia</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-cuerpo"></tbody>
+    </table>
 
     <script>
-        // 1. Datos iniciales precargados (20 Registros)
-        let estudiantes = [
-            { id: "EST-001", nombre: "Yover Fraye", apellido: "Medrano Llampasi", correo: "yover@example.com" },
-            { id: "EST-002", nombre: "Ana", apellido: "García Mendoza", correo: "ana.garcia@example.com" },
-            { id: "EST-003", nombre: "Carlos", apellido: "Torres Quispe", correo: "carlos.torres@example.com" },
-            { id: "EST-004", nombre: "Diana", apellido: "Flores Portal", correo: "diana.flores@example.com" },
-            { id: "EST-005", nombre: "Eduardo", apellido: "Ramírez Roca", correo: "eduardo.ramirez@example.com" },
-            { id: "EST-006", nombre: "Fiorella", apellido: "Chávez Vega", correo: "fiorella.chavez@example.com" },
-            { id: "EST-007", nombre: "Gabriel", apellido: "Sánchez Cruz", correo: "gabriel.sanchez@example.com" },
-            { id: "EST-008", nombre: "Helena", apellido: "Palomino Rios", correo: "helena.palomino@example.com" },
-            { id: "EST-009", nombre: "Iván", apellido: "Castro Díaz", correo: "ivan.castro@example.com" },
-            { id: "EST-010", nombre: "Jessica", apellido: "Morales Luna", correo: "jessica.morales@example.com" },
-            { id: "EST-011", nombre: "Kevin", apellido: "Espinoza Solís", correo: "kevin.espinoza@example.com" },
-            { id: "EST-012", nombre: "Laura", apellido: "Benítez Vera", correo: "laura.benitez@example.com" },
-            { id: "EST-013", nombre: "Manuel", apellido: "Rojas Gutiérrez", correo: "manuel.rojas@example.com" },
-            { id: "EST-014", nombre: "Nancy", apellido: "Miranda Tello", correo: "nancy.miranda@example.com" },
-            { id: "EST-015", nombre: "Óscar", apellido: "Paredes Vilca", correo: "oscar.paredes@example.com" },
-            { id: "EST-016", nombre: "Patricia", apellido: "Arias Soto", correo: "patricia.arias@example.com" },
-            { id: "EST-017", nombre: "Ricardo", apellido: "Mendoza Fuentes", correo: "ricardo.mendoza@example.com" },
-            { id: "EST-018", nombre: "Sandra", apellido: "Campos Navarro", correo: "sandra.campos@example.com" },
-            { id: "EST-019", nombre: "Tomás", apellido: "Cordero Alva", correo: "tomas.cordero@example.com" },
-            { id: "EST-020", nombre: "Valeria", apellido: "Ortiz Cárdenas", correo: "valeria.ortiz@example.com" }
-        ];
+        // 1. Base de datos interna (Array con 20 registros iniciales)
+        let alumnos = Array.from({length: 20}, (_, i) => ({
+            id: `EST-${String(i+1).padStart(3, '0')}`,
+            nombre: `Estudiante Ejemplo ${i+1}`
+        }));
 
-        // Estructura de asistencias: { "YYYY-MM-DD": { "EST-001": "Presente", "EST-002": "Ausente" } }
-        let asistencias = {};
-        let html5QrCode;
+        // Registro de asistencias: { "YYYY-MM-DD": { "ID": "Presente" } }
+        let asistencias = {}; 
 
-        // Inicialización
-        document.addEventListener("DOMContentLoaded", () => {
-            // Establecer fecha de hoy por defecto
-            document.getElementById('fechaFiltro').value = new Date().toISOString().split('T')[0];
-            renderizarTabla();
-            renderizarCalendario();
-        });
+        // Colocar la fecha de hoy automáticamente al abrir
+        document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
 
-        // 2. CRUD de Estudiantes con SweetAlert2
-        function renderizarTabla() {
-            const tbody = document.getElementById("tablaEstudiantes");
-            tbody.innerHTML = "";
-            estudiantes.forEach(est => {
-                tbody.innerHTML += `
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-4 py-3 font-mono text-xs font-bold text-blue-600">${est.id}</td>
-                        <td class="px-4 py-3 font-medium text-gray-900">${est.apellido}, ${est.nombre}</td>
-                        <td class="px-4 py-3 text-gray-500">${est.correo}</td>
-                        <td class="px-4 py-3 text-center space-x-2 whitespace-nowrap">
-                            <button onclick="editarEstudiante('${est.id}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 p-2 rounded transition" title="Editar">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-                            <button onclick="eliminarEstudiante('${est.id}')" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded transition" title="Eliminar">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+        // 2. Dibujar la interfaz
+        function actualizarPantalla() {
+            const cuerpo = document.getElementById("tabla-cuerpo");
+            cuerpo.innerHTML = "";
+            
+            const fechaSeleccionada = document.getElementById('fecha').value;
+            const registroHoy = asistencias[fechaSeleccionada] || {};
+
+            alumnos.forEach(alumno => {
+                const asis = registroHoy[alumno.id] ? "✅ Presente" : "❌ Ausente";
+                cuerpo.innerHTML += `
+                    <tr>
+                        <td style="padding:8px;"><b>${alumno.id}</b></td>
+                        <td style="padding:8px;">${alumno.nombre}</td>
+                        <td style="padding:8px;">${asis}</td>
+                        <td style="padding:8px;">
+                            <button onclick="eliminar('${alumno.id}')">🗑️</button>
                         </td>
-                    </tr>
-                `;
+                    </tr>`;
             });
         }
 
-        async function crearEstudiante() {
-            const { value: formValues } = await Swal.fire({
-                title: 'Nuevo Estudiante',
-                html:
-                    `<input id="swal-id" class="swal2-input" placeholder="ID Único (ej: EST-021)">` +
-                    `<input id="swal-nombre" class="swal2-input" placeholder="Nombres">` +
-                    `<input id="swal-apellido" class="swal2-input" placeholder="Apellidos">` +
-                    `<input id="swal-correo" type="email" class="swal2-input" placeholder="Correo Electrónico">`,
-                focusConfirm: false,
-                showCancelButton: true,
-                confirmButtonText: 'Guardar',
-                cancelButtonText: 'Cancelar',
-                preConfirm: () => {
-                    const id = document.getElementById('swal-id').value.trim().toUpperCase();
-                    const nombre = document.getElementById('swal-nombre').value.trim();
-                    const apellido = document.getElementById('swal-apellido').value.trim();
-                    const correo = document.getElementById('swal-correo').value.trim();
-                    
-                    if (!id || !nombre || !apellido || !correo) {
-                        Swal.showValidationMessage('Todos los campos son obligatorios');
-                        return false;
-                    }
-                    if (estudiantes.some(e => e.id === id)) {
-                        Swal.showValidationMessage('El ID ya existe');
-                        return false;
-                    }
-                    return { id, nombre, apellido, correo };
-                }
-            });
-
-            if (formValues) {
-                estudiantes.push(formValues);
-                renderizarTabla();
-                Swal.fire('¡Éxito!', 'Estudiante registrado correctamente.', 'success');
-            }
-        }
-
-        async function editarEstudiante(id) {
-            const est = estudiantes.find(e => e.id === id);
-            if (!est) return;
-
-            const { value: formValues } = await Swal.fire({
-                title: 'Editar Estudiante',
-                html:
-                    `<input id="swal-nombre" class="swal2-input" value="${est.nombre}" placeholder="Nombres">` +
-                    `<input id="swal-apellido" class="swal2-input" value="${est.apellido}" placeholder="Apellidos">` +
-                    `<input id="swal-correo" type="email" class="swal2-input" value="${est.correo}" placeholder="Correo">`,
-                focusConfirm: false,
-                showCancelButton: true,
-                confirmButtonText: 'Actualizar',
-                cancelButtonText: 'Cancelar',
-                preConfirm: () => {
-                    const nombre = document.getElementById('swal-nombre').value.trim();
-                    const apellido = document.getElementById('swal-apellido').value.trim();
-                    const correo = document.getElementById('swal-correo').value.trim();
-                    if (!nombre || !apellido || !correo) {
-                        Swal.showValidationMessage('Campos obligatorios vacíos');
-                        return false;
-                    }
-                    return { nombre, apellido, correo };
-                }
-            });
-
-            if (formValues) {
-                est.nombre = formValues.nombre;
-                est.apellido = formValues.apellido;
-                est.correo = formValues.correo;
-                renderizarTabla();
-                Swal.fire('Actualizado', 'Datos actualizados con éxito.', 'success');
-            }
-        }
-
-        function eliminarEstudiante(id) {
+        // 3. Registrar nuevo estudiante con SweetAlert2
+        function agregar() {
             Swal.fire({
-                title: '¿Estás seguro?',
-                text: `Se eliminará el estudiante con ID ${id} de forma permanente.`,
-                icon: 'warning',
-                showCancelButton: true
+                title: 'Nuevo Estudiante',
+                html: '<input id="ins-id" placeholder="ID (ej: EST-021)" style="margin-bottom:10px;"><br><input id="ins-nom" placeholder="Nombre Completo">',
+                preConfirm: () => {
+                    const id = document.getElementById('ins-id').value.trim().toUpperCase();
+                    const nombre = document.getElementById('ins-nom').value.trim();
+                    if(!id || !nombre) return Swal.showValidationMessage('Completa ambos campos');
+                    if(alumnos.some(a => a.id === id)) return Swal.showValidationMessage('El ID ya existe');
+                    return { id, nombre };
+                }
+            }).then(r => {
+                if(r.value) {
+                    alumnos.push(r.value);
+                    actualizarPantalla();
+                    Swal.fire('Guardado', '', 'success');
+                }
+            });
+        }
+
+        // 4. Eliminar Estudiante
+        function eliminar(id) {
+            alumnos = alumnos.filter(a => a.id !== id);
+            actualizarPantalla();
+        }
+
+        // 5. Escáner QR por Cámara (Usa la cámara trasera en celulares)
+        function encenderCamara() {
+            let html5QrCode = new Html5Qrcode("camara");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: 180 },
+                (codigoEscaneado) => {
+                    const fecha = document.getElementById('fecha').value;
+                    const alumnoExiste = alumnos.find(a => a.id === codigoEscaneado.trim());
+
+                    if (alumnoExiste) {
+                        if (!asistencias[fecha]) asistencias[fecha] = {};
+                        asistencias[fecha][codigoEscaneado.trim()] = true; // Marca como presente
+                        actualizarPantalla();
+                        Swal.fire({ title: 'Asistencia OK', text: alumnoExiste.nombre, icon: 'success', timer: 1500, showConfirmButton: false });
+                    } else {
+                        Swal.fire('No encontrado', `El código ${codigoEscaneado} no pertenece a la lista`, 'error');
+                    }
+                }
+            ).catch(err => alert("Error al iniciar cámara: " + err));
+        }
+
+        // 6. Exportar Backup como código .js ejecutable
+        function exportarBackup() {
+            const dataStr = `// Backup del sistema\nconst DATOS_RESPALDO = ${JSON.stringify({alumnos, asistencias}, null, 2)};`;
+            const blob = new Blob([dataStr], {type: "text/javascript"});
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `backup_${document.getElementById('fecha').value}.js`;
+            a.click();
+        }
+
+        // Carga inicial de la tabla
+        actualizarPantalla();
+    </script>
+</body>
+</html>
