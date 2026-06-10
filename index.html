@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sneaker Master - Gestión de Inventario & Ventas</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        body { font-family: 'Poppins', sans-serif; }
+        .glass-effect { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-slate-900 text-white shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-bolt-lightning text-orange-500 text-2xl"></i>
+                <h1 class="text-2xl font-bold tracking-tighter">SNEAKER<span class="text-orange-500">PRO</span></h1>
+            </div>
+            
+            <div class="flex w-full md:w-2/3 gap-2">
+                <div class="relative w-full">
+                    <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
+                    <input type="text" id="inputBuscarMarca" placeholder="Ingresar la marca a buscar..." 
+                        class="w-full pl-10 pr-4 py-2 rounded-lg border-none focus:ring-2 focus:ring-orange-500 text-gray-800 shadow-inner">
+                </div>
+                <button onclick="buscarPorMarca()" class="bg-orange-500 hover:bg-orange-600 px-6 py-2 rounded-lg font-bold transition-all shadow-lg flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass"></i> BUSCAR
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-warehouse text-orange-500"></i> LISTADO DE STOCK
+            </h2>
+            <button onclick="abrirModalNuevo()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 transform hover:scale-105">
+                <i class="fa-solid fa-circle-plus"></i> REGISTRAR ZAPATILLA
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-800 text-white text-sm uppercase tracking-wider">
+                            <th class="p-4">Marca</th>
+                            <th class="p-4">Modelo</th>
+                            <th class="p-4">Color</th>
+                            <th class="p-4 text-center">Talla</th>
+                            <th class="p-4 text-center">Precio</th>
+                            <th class="p-4 text-center">Catálogo / Pedido</th>
+                            <th class="p-4 text-center">Gestión</th>
+                            <th class="p-4 text-center">Ventas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaZapatillas" class="divide-y divide-gray-100">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="modalQR" class="fixed inset-0 bg-black/80 hidden z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative">
+            <button onclick="cerrarModalQR()" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-2xl">
+                <i class="fa-solid fa-circle-xmark"></i>
+            </button>
+            <h3 class="text-2xl font-bold text-slate-800 mb-2">Pedido WhatsApp</h3>
+            <p class="text-sm text-gray-500 mb-6">Escanea el QR para enviar el pedido al vendedor</p>
+            <div id="qrcode" class="flex justify-center mb-6"></div>
+            <div id="detallePedidoQR" class="bg-orange-50 p-4 rounded-xl text-sm text-orange-800 font-medium"></div>
+            <button onclick="cerrarModalQR()" class="mt-6 w-full bg-slate-900 text-white py-3 rounded-xl font-bold">CERRAR</button>
+        </div>
+    </div>
+
+    <script>
+        const WHATSAPP_VENDEDOR = "929188138";
+
+        // Base de datos de 15 registros iniciales
+        let inventario = [
+            { id: 1, marca: "Adidas", modelo: "Samba Classic", colores: "Celeste / Blanco Nube", talla: 40, catalogo: "CAT-AD-350", precio: 303.74, pedido: "PED-9754" },
+            { id: 2, marca: "Adidas", modelo: "Forum Low", colores: "Blanco Vintage / Navy", talla: 36, catalogo: "CAT-AD-130", precio: 237.68, pedido: "PED-9238" },
+            { id: 3, marca: "Nike", modelo: "Dunk Low Vintage", colores: "Blanco / Verde Bosque", talla: 44, catalogo: "CAT-NI-529", precio: 302.32, pedido: "PED-9603" },
+            { id: 4, marca: "Nike", modelo: "Ultraboost Light", colores: "Celeste / Blanco Nube", talla: 42, catalogo: "CAT-NI-448", precio: 331.61, pedido: "PED-9220" },
+            { id: 5, marca: "Adidas", modelo: "Samba Classic", colores: "Blanco Vintage / Navy", talla: 37, catalogo: "CAT-AD-467", precio: 622.12, pedido: "PED-9618" },
+            { id: 6, marca: "Nike", modelo: "Pegasus 40", colores: "Gris Plata / Naranja Neon", talla: 37, catalogo: "CAT-NI-487", precio: 230.09, pedido: "PED-9300" },
+            { id: 7, marca: "Asics", modelo: "Gel-Lyte III", colores: "Blanco / Verde Bosque", talla: 37, catalogo: "CAT-AS-146", precio: 527.14, pedido: "PED-9791" },
+            { id: 8, marca: "Adidas", modelo: "Stan Smith", colores: "Negro / Gris Carbón", talla: 42, catalogo: "CAT-AD-384", precio: 421.14, pedido: "PED-9854" },
+            { id: 9, marca: "Puma", modelo: "Cali Dream", colores: "Azul Marino / Lima", talla: 39, catalogo: "CAT-PU-786", precio: 326.06, pedido: "PED-9959" },
+            { id: 10, marca: "Adidas", modelo: "Forum Low", colores: "Verde Oliva / Crema", talla: 38, catalogo: "CAT-AD-646", precio: 561.75, pedido: "PED-9167" },
+            { id: 11, marca: "Reebok", modelo: "Nano X4", colores: "Verde Oliva / Crema", talla: 44, catalogo: "CAT-RE-324", precio: 539.05, pedido: "PED-9863" },
+            { id: 12, marca: "New Balance", modelo: "550 Classic", colores: "Azul Marino / Lima", talla: 42, catalogo: "CAT-NE-374", precio: 223.66, pedido: "PED-9935" },
+            { id: 13, marca: "Asics", modelo: "Gel-Nimbus 26", colores: "Verde Oliva / Crema", talla: 43, catalogo: "CAT-AS-505", precio: 641.09, pedido: "PED-9658" },
+            { id: 14, marca: "Puma", modelo: "Cali Dream", colores: "Beige / Rosa Pastel", talla: 39, catalogo: "CAT-PU-862", precio: 476.20, pedido: "PED-9269" },
+            { id: 15, marca: "Reebok", modelo: "Bb 4000 II", colores: "Blanco Vintage / Navy", talla: 41, catalogo: "CAT-RE-324", precio: 698.54, pedido: "PED-9141" }
+        ];
+
+        // Función para renderizar la tabla
+        function renderTabla(datos = inventario) {
+            const tbody = document.getElementById('tablaZapatillas');
+            tbody.innerHTML = '';
+
+            datos.forEach(item => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-orange-50 transition-colors">
+                        <td class="p-4 font-bold text-slate-700">${item.marca}</td>
+                        <td class="p-4 text-gray-600">${item.modelo}</td>
+                        <td class="p-4 text-sm text-gray-500">${item.colores}</td>
+                        <td class="p-4 text-center font-bold">
+                            <span class="bg-gray-200 px-2 py-1 rounded text-xs">${item.talla}</span>
+                        </td>
+                        <td class="p-4 text-center text-emerald-600 font-bold">S/. ${item.precio.toFixed(2)}</td>
+                        <td class="p-4 text-center text-xs">
+                            <div class="text-gray-400">${item.catalogo}</div>
+                            <div class="font-mono font-bold text-orange-600">${item.pedido}</div>
+                        </td>
+                        <td class="p-4 text-center">
+                            <div class="flex gap-2 justify-center">
+                                <button onclick="editarRegistro(${item.id})" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button onclick="eliminarRegistro(${item.id})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
+                        <td class="p-4 text-center">
+                            <button onclick="generarQR(${item.id})" class="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-600 hover:text-white transition-all shadow-sm">
+                                <i class="fa-solid fa-qrcode"></i> PEDIR
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- FUNCIONALIDAD DE GESTIÓN (CRUD) ---
+
+        function abrirModalNuevo() {
+            Swal.fire({
+                title: 'Registrar Nueva Zapatilla',
+                html: `
+                    <input id="n-marca" class="swal2-input" placeholder="Marca (Ej: Nike)">
+                    <input id="n-modelo" class="swal2-input" placeholder="Modelo">
+                    <input id="n-color" class="swal2-input" placeholder="Color">
+                    <input id="n-talla" type="number" class="swal2-input" placeholder="Talla">
+                    <input id="n-precio" type="number" class="swal2-input" placeholder="Precio (S/.)">
+                    <input id="n-catalogo" class="swal2-input" placeholder="Cod. Catálogo">
+                `,
+                confirmButtonText: 'Guardar Registro',
+                confirmButtonColor: '#059669',
+                preConfirm: () => {
+                    return {
+                        marca: document.getElementById('n-marca').value,
+                        modelo: document.getElementById('n-modelo').value,
+                        colores: document.getElementById('n-color').value,
+                        talla: parseInt(document.getElementById('n-talla').value),
+                        precio: parseFloat(document.getElementById('n-precio').value),
+                        catalogo: document.getElementById('n-catalogo').value,
+                        pedido: 'PED-' + Math.floor(Math.random() * 9999),
+                        id: Date.now()
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    inventario.push(result.value);
+                    renderTabla();
+                    Swal.fire('¡Éxito!', 'Zapatilla registrada correctamente', 'success');
+                }
+            });
+        }
+
+        function editarRegistro(id) {
+            const index = inventario.findIndex(i => i.id === id);
+            const item = inventario[index];
+
+            Swal.fire({
+                title: 'Editar Datos',
+                html: `
+                    <label class="text-xs text-left block text-gray-500">Marca</label>
+                    <input id="e-marca" class="swal2-input" value="${item.marca}">
+                    <label class="text-xs text-left block text-gray-500">Modelo</label>
+                    <input id="e-modelo" class="swal2-input" value="${item.modelo}">
+                    <label class="text-xs text-left block text-gray-500">Precio (S/.)</label>
+                    <input id="e-precio" type="number" class="swal2-input" value="${item.precio}">
+                    <label class="text-xs text-left block text-gray-500">Talla</label>
+                    <input id="e-talla" type="number" class="swal2-input" value="${item.talla}">
+                `,
+                confirmButtonText: 'Actualizar Todo',
+                preConfirm: () => {
+                    inventario[index].marca = document.getElementById('e-marca').value;
+                    inventario[index].modelo = document.getElementById('e-modelo').value;
+                    inventario[index].precio = parseFloat(document.getElementById('e-precio').value);
+                    inventario[index].talla = parseInt(document.getElementById('e-talla').value);
+                }
+            }).then(() => {
+                renderTabla();
+                Swal.fire('¡Actualizado!', 'Los datos han sido modificados', 'success');
+            });
+        }
+
+        function eliminarRegistro(id) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "No podrás revertir esta acción",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    inventario = inventario.filter(i => i.id !== id);
+                    renderTabla();
+                    Swal.fire('Eliminado', 'El registro ha sido borrado', 'success');
+                }
+            });
+        }
+
+        // --- BUSQUEDA ---
+
+        function buscarPorMarca() {
+            const termino = document.getElementById('inputBuscarMarca').value.toLowerCase();
+            const filtrados = inventario.filter(i => i.marca.toLowerCase().includes(termino));
+            renderTabla(filtrados);
+        }
+
+        // --- QR & WHATSAPP ---
+
+        let qrCodeInstance = null;
+
+        function generarQR(id) {
+            const item = inventario.find(i => i.id === id);
+            const mensaje = `Hola! 👋 Deseo realizar un pedido:\n👟 Marca: ${item.marca}\n📌 Modelo: ${item.modelo}\n📏 Talla: ${item.talla}\n💰 Precio: S/. ${item.precio.toFixed(2)}\n📦 Pedido: ${item.pedido}`;
+            const urlWhatsApp = `https://wa.me/51${WHATSAPP_VENDEDOR}?text=${encodeURIComponent(mensaje)}`;
+
+            document.getElementById('qrcode').innerHTML = '';
+            qrCodeInstance = new QRCode(document.getElementById("qrcode"), {
+                text: urlWhatsApp,
+                width: 200,
+                height: 200,
+                colorDark : "#0f172a",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('detallePedidoQR').innerHTML = `
+                <b>${item.marca} ${item.modelo}</b><br>
+                Talla: ${item.talla} - Precio: S/. ${item.precio.toFixed(2)}
+            `;
+            
+            document.getElementById('modalQR').classList.remove('hidden');
+        }
+
+        function cerrarModalQR() {
+            document.getElementById('modalQR').classList.add('hidden');
+        }
+
+        // Renderizado inicial
+        renderTabla();
+    </script>
+</body>
+</html>
