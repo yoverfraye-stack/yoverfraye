@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Zapatillas Deportivas - Catálogo & Pedidos</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <nav class="bg-blue-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3.5 flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-shoe-prints"></i> SneakerControl Pro
+            </h1>
+            <div class="flex gap-2">
+                <button onclick="abrirFormularioZapatilla()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1 shadow-md">
+                    <i class="fa-solid fa-plus"></i> Nueva Zapatilla
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex flex-col md:flex-row gap-3 items-center">
+                <div class="w-full relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-gray-400"></i>
+                    <input id="inputBuscarMarca" type="text" placeholder="Ingresa la marca a buscar (Ej: Nike, Adidas, Puma)..." 
+                           class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium transition">
+                </div>
+                <div class="flex w-full md:w-auto gap-2">
+                    <button onclick="buscarPorMarca()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-filter"></i> Buscar Marca
+                    </button>
+                    <button onclick="limpiarBusqueda()" class="w-full md:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-3 rounded-lg text-sm transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-rotate-left"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+            <div id="statusFiltro" class="hidden mt-3 text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1.5 rounded-md inline-flex items-center gap-1.5">
+                <span id="textoFiltro"></span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                <h2 class="font-bold text-gray-700 flex items-center gap-2">
+                    <i class="fa-solid fa-list text-blue-600"></i> Inventario de Calzado
+                </h2>
+                <span id="contadorRegistros" class="text-xs bg-gray-200 text-gray-700 font-bold px-2.5 py-1 rounded-full">10 Registros</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-xs uppercase font-bold tracking-wider border-b border-gray-200">
+                            <th class="p-4">Marca</th>
+                            <th class="p-4">Modelo</th>
+                            <th class="p-4">Colores</th>
+                            <th class="p-4 text-center">Talla</th>
+                            <th class="p-4">Código Catálogo</th>
+                            <th class="p-4">ID Pedido</th>
+                            <th class="p-4">Teléfono Contacto</th>
+                            <th class="p-4 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaZapatillas" class="text-sm divide-y divide-gray-100">
+                        </tbody>
+                </table>
+            </div>
+            
+            <div id="tablaVacia" class="hidden text-center py-12 text-gray-400">
+                <i class="fa-solid fa-box-open text-5xl mb-3"></i>
+                <p class="text-sm font-medium">No se encontraron registros de zapatillas para la marca ingresada.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 1. DATA INICIAL DE LOS 10 REGISTROS REQUERIDOS
+        const zapatillasIniciales = [
+            { id: "zap_1", marca: "Nike", modelo: "Air Force 1 '07", colores: "Blanco / Azul University", talla: 42, catalogo: "CAT-NK-001", pedido: "PED-9012", telefono: "987654321" },
+            { id: "zap_2", marca: "Adidas", modelo: "Ultraboost Light", colores: "Negro / Gris Carbón", talla: 40, catalogo: "CAT-AD-045", pedido: "PED-9013", telefono: "951847263" },
+            { id: "zap_3", marca: "Puma", modelo: "RS-X Reinvent", colores: "Beige / Rosa Pastel", talla: 38, catalogo: "CAT-PM-112", pedido: "PED-9014", telefono: "912345678" },
+            { id: "zap_4", marca: "New Balance", modelo: "550 Classic", colores: "Blanco / Verde Bosque", talla: 41, catalogo: "CAT-NB-550", pedido: "PED-9015", telefono: "963852741" },
+            { id: "zap_5", marca: "Jordan", modelo: "Air Jordan 1 Retro", colores: "Rojo / Blanco / Negro", talla: 43, catalogo: "CAT-JD-023", pedido: "PED-9016", telefono: "947153286" },
+            { id: "zap_6", marca: "Asics", modelo: "Gel-Kayano 29", colores: "Azul Marino / Lima", talla: 42, catalogo: "CAT-AS-223", pedido: "PED-9017", telefono: "935628147" },
+            { id: "zap_7", marca: "Reebok", modelo: "Club C 85", colores: "Blanco Vintage / Navy", talla: 39, catalogo: "CAT-RB-885", pedido: "PED-9018", telefono: "921748359" },
+            { id: "zap_8", marca: "Under Armour", modelo: "Hovr Phantom 3", colores: "Negro Total", talla: 44, catalogo: "CAT-UA-664", pedido: "PED-9019", telefono: "974123658" },
+            { id: "zap_9", marca: "Vans", modelo: "Old Skool", colores: "Negro / Blanco / Cuadros", talla: 37, catalogo: "CAT-VS-442", pedido: "PED-9020", telefono: "956321478" },
+            { id: "zap_10", marca: "Converse", modelo: "Chuck 70 Hi", colores: "Amarillo Girasol", talla: 36, catalogo: "CAT-CV-331", pedido: "PED-9021", telefono: "989654123" }
+        ];
+
+        // Estado global dinámico persistido en LocalStorage
+        let inventario = JSON.parse(localStorage.getItem('db_zapatillas')) || zapatillasIniciales;
+        let filtroMarcaActual = "";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            guardarEnStorage();
+            renderTabla();
+        });
+
+        function guardarEnStorage() {
+            localStorage.setItem('db_zapatillas', JSON.stringify(inventario));
+        }
+
+        // 2. RENDERIZADO DE FILAS (ACCESO CON UN CLIC)
+        function renderTabla() {
+            const tbody = document.getElementById('tablaZapatillas');
+            const tablaVacia = document.getElementById('tablaVacia');
+            tbody.innerHTML = '';
+
+            // Filtrado condicional por coincidencia de caracteres
+            const datosFiltrados = inventario.filter(z => 
+                filtroMarcaActual === "" || z.marca.toLowerCase().includes(filtroMarcaActual.toLowerCase())
+            );
+
+            document.getElementById('contadorRegistros').innerText = `${datosFiltrados.length} Registro(s)`;
+            
+            if (datosFiltrados.length === 0) {
+                tablaVacia.classList.remove('hidden');
+            } else {
+                tablaVacia.classList.add('hidden');
+                
+                datosFiltrados.forEach(zap => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50/80 transition cursor-pointer";
+                    
+                    // ACCION DE UN CLIC: Al presionar la fila ingresa a ver la Ficha Interactiva con el QR
+                    tr.onclick = (e) => {
+                        if (e.target.closest('.btn-accion')) return; // No interrumpe si hace clic en editar/eliminar
+                        verFichaDetalleQR(zap.id);
+                    };
+
+                    tr.innerHTML = `
+                        <td class="p-4 font-bold text-gray-900">${zap.marca}</td>
+                        <td class="p-4 text-gray-700 font-medium">${zap.modelo}</td>
+                        <td class="p-4 text-xs text-gray-500">${zap.colores}</td>
+                        <td class="p-4 text-center font-semibold text-blue-600 bg-blue-50/30">${zap.talla}</td>
+                        <td class="p-4 font-mono text-xs text-gray-600">${zap.catalogo}</td>
+                        <td class="p-4 font-mono text-xs text-purple-600 font-semibold">${zap.pedido}</td>
+                        <td class="p-4 text-gray-600">${zap.telefono}</td>
+                        <td class="p-4 text-center">
+                            <div class="flex justify-center gap-1.5">
+                                <button onclick="abrirFormularioZapatilla('${zap.id}')" class="btn-accion p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar Datos">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="eliminarZapatilla('${zap.id}')" class="btn-accion p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="Eliminar Registro">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        // 3. LOGICA DEL BOTÓN DE INGRESO DE MARCA Y BÚSQUEDA
+        function buscarPorMarca() {
+            const input = document.getElementById('inputBuscarMarca');
+            const valor = input.value.trim();
+            const statusDiv = document.getElementById('statusFiltro');
+            const textoFiltro = document.getElementById('textoFiltro');
+
+            if (valor === "") {
+                limpiarBusqueda();
+                return;
+            }
+
+            filtroMarcaActual = valor;
+            textoFiltro.innerHTML = `<i class="fa-solid fa-circle-info"></i> Mostrando solo calzado de la marca: <strong>"${valor}"</strong>`;
+            statusDiv.classList.remove('hidden');
+            renderTabla();
+        }
+
+        function limpiarBusqueda() {
+            document.getElementById('inputBuscarMarca').value = "";
+            document.getElementById('statusFiltro').classList.add('hidden');
+            filtroMarcaActual = "";
+            renderTabla();
+        }
+
+        // 4. FORMULARIO INTERACTIVO (REGISTRAR NUEVAS MARCAS / EDITAR)
+        async function abrirFormularioZapatilla(idEdit = null) {
+            const esEdicion = idEdit !== null;
+            const zap = inventario.find(z => z.id === idEdit) || { marca:'', modelo:'', colores:'', talla:'', catalogo:'', pedido:'', telefono:'' };
+
+            const { value: formValues } = await Swal.fire({
+                title: esEdicion ? '✏️ Editar Registro de Zapatilla' : '👟 Registrar Nueva Zapatilla / Marca',
+                html: `
+                    <div class="text-left space-y-3.5 p-1 text-sm">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Marca *</label>
+                                <input id="swal-marca" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" type="text" value="${zap.marca}" placeholder="Ej: Nike">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Modelo *</label>
+                                <input id="swal-modelo" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" type="text" value="${zap.modelo}" placeholder="Ej: Air Max">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Colores / Combinación *</label>
+                            <input id="swal-colores" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" type="text" value="${zap.colores}" placeholder="Ej: Negro / Blanco">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Talla (EUR) *</label>
+                                <input id="swal-talla" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" type="number" value="${zap.talla}" placeholder="Ej: 41">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Código Catálogo *</label>
+                                <input id="swal-catalogo" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" type="text" value="${zap.catalogo}" placeholder="Ej: CAT-NK-100">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Código de Pedido *</label>
+                                <input id="swal-pedido" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" type="text" value="${zap.pedido}" placeholder="Ej: PED-1122">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Teléfono Contacto *</label>
+                                <input id="swal-telefono" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" type="tel" value="${zap.telefono}" placeholder="Ej: 999888777">
+                            </div>
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa-solid fa-floppy-disk"></i> Guardar Cambios',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#2563eb',
+                preConfirm: () => {
+                    const marca = document.getElementById('swal-marca').value.trim();
+                    const modelo = document.getElementById('swal-modelo').value.trim();
+                    const colores = document.getElementById('swal-colores').value.trim();
+                    const talla = parseInt(document.getElementById('swal-talla').value);
+                    const catalogo = document.getElementById('swal-catalogo').value.trim();
+                    const pedido = document.getElementById('swal-pedido').value.trim();
+                    const telefono = document.getElementById('swal-telefono').value.trim();
+
+                    if (!marca || !modelo || !colores || !talla || !catalogo || !pedido || !telefono) {
+                        Swal.showValidationMessage('Todos los campos son obligatorios para guardar el registro');
+                        return false;
+                    }
+                    return { marca, modelo, colores, talla, catalogo, pedido, telefono };
+                }
+            });
+
+            if (formValues) {
+                if (esEdicion) {
+                    const index = inventario.findIndex(z => z.id === idEdit);
+                    inventario[index] = { id: idEdit, ...formValues };
+                    Swal.fire('¡Actualizado!', 'Los datos de la zapatilla han sido modificados.', 'success');
+                } else {
+                    const nuevoId = 'zap_' + Date.now();
+                    inventario.push({ id: nuevoId, ...formValues });
+                    Swal.fire('¡Creado!', 'La nueva marca y modelo han sido incorporados con éxito.', 'success');
+                }
+                guardarEnStorage();
+                renderTabla();
+            }
+        }
+
+        // 5. ELIMINAR REGISTROS
+        function eliminarZapatilla(id) {
+            const zap = inventario.find(z => z.id === id);
+            Swal.fire({
+                title: '¿Confirmas la eliminación?',
+                text: `Se borrará definitivamente el registro del modelo ${zap.modelo} (${zap.marca}).`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    inventario = inventario.filter(z => z.id !== id);
+                    guardarEnStorage();
+                    renderTabla();
+                    Swal.fire('Eliminado', 'El calzado ha sido removido del sistema local.', 'success');
+                }
+            });
+        }
+
+        // 6. FORMULARIO INTERACTIVO DE DETALLE CON CÓDIGO QR GENERADO AL INGRESAR CON UN CLIC
+        function verFichaDetalleQR(id) {
+            const zap = inventario.find(z => z.id === id);
+            
+            // Texto formateado que procesará el lector de códigos QR
+            const datosQR = `MARCA: ${zap.marca}\nMODELO: ${zap.modelo}\nTALLA: ${zap.talla}\nCATALOGO: ${zap.catalogo}\nPEDIDO: ${zap.pedido}\nTLF: ${zap.telefono}`;
+
+            Swal.fire({
+                title: `Detalle de Producto`,
+                html: `
+                    <div class="space-y-4">
+                        <div class="text-left bg-gray-50 p-4 rounded-lg text-sm border border-gray-200">
+                            <p class="mb-1.5"><strong>Marca de Calzado:</strong> <span class="text-blue-700 font-bold">${zap.marca}</span></p>
+                            <p class="mb-1.5"><strong>Modelo:</strong> ${zap.modelo}</p>
+                            <p class="mb-1.5"><strong>Colores:</strong> ${zap.colores}</p>
+                            <p class="mb-1.5"><strong>Talla:</strong> ${zap.talla}</p>
+                            <p class="mb-1.5"><strong>Código de Catálogo:</strong> ${zap.catalogo}</p>
+                            <p class="mb-1.5"><strong>Número de Pedido:</strong> ${zap.pedido}</p>
+                            <p class="mb-0"><strong>Teléfono de Contacto:</strong> ${zap.telefono}</p>
+                        </div>
+                        <div class="flex flex-col items-center justify-center p-3 bg-white border border-dashed border-gray-300 rounded-lg">
+                            <p class="text-xs text-gray-500 font-bold mb-2"><i class="fa-solid fa-qrcode"></i> IDENTIFICADOR QR DEL PEDIDO</p>
+                            <div id="contenedorCodigoQR" class="p-2 bg-white"></div>
+                            <p class="text-[10px] text-gray-400 mt-2 text-center">Usa la cámara del smartphone para escanear y transferir los datos del calzado</p>
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: 'Cerrar Ficha',
+                confirmButtonColor: '#2563eb',
+                didOpen: () => {
+                    // Genera el código QR de manera síncrona en el contenedor del SweetAlert2
+                    new QRCode(document.getElementById("contenedorCodigoQR"), {
+                        text: datosQR,
+                        width: 140,
+                        height: 140,
+                        colorDark: "#1e3a8a",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
